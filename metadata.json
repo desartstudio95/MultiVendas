@@ -1,0 +1,5 @@
+{
+  "name": "MultiVendas",
+  "description": "MultiVendas - O marketplace moderno de Moçambique. Conectando você aos melhores produtos e serviços.",
+  "requestFramePermissions": ["geolocation"]
+}
