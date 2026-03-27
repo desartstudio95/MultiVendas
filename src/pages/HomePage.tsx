@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Product, Category } from '../types';
 import { cn } from '../lib/utils';
@@ -46,8 +46,25 @@ const CATEGORIES: Category[] = [
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [homeData, setHomeData] = useState({
+    title: 'O que você está <br /> <span className="text-orange-500">procurando hoje?</span>',
+    subtitle: 'Tudo o que procuras, num só lugar'
+  });
 
   useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        const docRef = doc(db, 'pages', 'home');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setHomeData(docSnap.data() as any);
+        }
+      } catch (error) {
+        console.error("Error fetching home data:", error);
+      }
+    };
+    fetchHomeData();
+
     const q = query(
       collection(db, 'products'),
       orderBy('createdAt', 'desc'),
@@ -95,9 +112,13 @@ export default function HomePage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <h1 className="text-4xl md:text-6xl font-black text-white mb-4 leading-tight tracking-tight">
-              O que você está <br /> <span className="text-yellow-400">procurando hoje?</span>
-            </h1>
+            <h1 
+              className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight tracking-tight"
+              dangerouslySetInnerHTML={{ __html: homeData.title.replace('text-yellow-400', 'text-orange-500') }}
+            />
+            <p className="text-green-50 text-lg md:text-xl font-medium mb-8 max-w-lg opacity-90">
+              {homeData.subtitle}
+            </p>
             <div className="flex items-center gap-3 text-white/90 text-sm font-medium bg-white/10 backdrop-blur-md w-fit px-4 py-2 rounded-full border border-white/20">
               <MapPin className="w-4 h-4 text-yellow-400" />
               <span>Moçambique, Maputo</span>
@@ -150,8 +171,8 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Destaques em Moçambique</h2>
           <div className="flex gap-2">
-            <Link to="/categories" className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 hover:border-green-500 transition-colors">Novos</Link>
-            <Link to="/categories" className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 hover:border-green-500 transition-colors">Preço</Link>
+            <Link to="/categories?sort=date-desc" className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 hover:border-green-500 transition-colors">Novos</Link>
+            <Link to="/categories?sort=price-asc" className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 hover:border-green-500 transition-colors">Preço</Link>
           </div>
         </div>
 

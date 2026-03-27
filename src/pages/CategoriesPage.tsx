@@ -57,11 +57,12 @@ const PRODUCTS_PER_PAGE = 6;
 export default function CategoriesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get('cat') || 'Todos';
+  const initialSort = searchParams.get('sort') as any || 'date-desc';
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'price-asc' | 'price-desc'>('date-desc');
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'price-asc' | 'price-desc'>(initialSort);
   const [showSortMenu, setShowSortMenu] = useState(false);
 
   useEffect(() => {
@@ -167,6 +168,10 @@ export default function CategoriesPage() {
                         key={option.id}
                         onClick={() => {
                           setSortBy(option.id as any);
+                          setSearchParams(prev => {
+                            prev.set('sort', option.id);
+                            return prev;
+                          });
                           setShowSortMenu(false);
                         }}
                         className={cn(
@@ -283,7 +288,7 @@ export default function CategoriesPage() {
                         <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-1">{product.category}</p>
                         <h3 className="text-sm font-bold text-gray-900 line-clamp-1 mb-2">{product.title}</h3>
                         <div className="flex items-center justify-between">
-                          <span className="text-base font-black text-gray-900">{formatCurrency(product.price)}</span>
+                          <span className="text-sm font-black text-gray-900">{formatCurrency(product.price)}</span>
                         </div>
                       </div>
                     </Link>

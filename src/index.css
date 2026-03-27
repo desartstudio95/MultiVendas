@@ -3,6 +3,18 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-green-50: #e0f9ef;
+  --color-green-100: #b3f0d7;
+  --color-green-200: #80e5bc;
+  --color-green-300: #4ddaa1;
+  --color-green-400: #26d28c;
+  --color-green-500: #01ae72;
+  --color-green-600: #018b5b;
+  --color-green-700: #016844;
+  --color-green-800: #00462e;
+  --color-green-900: #002317;
+  --color-green-950: #00120b;
 }
 
 @layer base {

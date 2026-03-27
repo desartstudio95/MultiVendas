@@ -17,6 +17,7 @@ export interface Product {
   location: string;
   delivery: string;
   sellerPhone?: string;
+  sellerContacts?: string[];
   status: 'active' | 'sold' | 'draft';
   createdAt: string;
   updatedAt: string;

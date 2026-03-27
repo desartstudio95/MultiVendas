@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
@@ -18,7 +18,11 @@ import {
   X,
   CheckCircle2,
   XCircle,
-  Search
+  Search,
+  Share2,
+  FileText,
+  Save,
+  PlusCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -35,10 +39,151 @@ const CATEGORIES = [
   { name: 'Outros', icon: 'Box' }
 ];
 
+const PAGES_TO_EDIT = [
+  { id: 'home', title: 'Home (Banner)' },
+  { id: 'terms', title: 'Termos de Uso' },
+  { id: 'how-to-buy', title: 'Como Comprar' },
+  { id: 'security', title: 'Segurança' }
+];
+
+function PagesEditor() {
+  const [activePage, setActivePage] = useState(PAGES_TO_EDIT[0].id);
+  const [content, setContent] = useState('');
+  const [homeData, setHomeData] = useState({ title: '', subtitle: '' });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchPage = async () => {
+      setLoading(true);
+      try {
+        const docRef = doc(db, 'pages', activePage);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          if (activePage === 'home') {
+            setHomeData(docSnap.data() as any);
+          } else {
+            setContent(docSnap.data().content);
+          }
+        } else {
+          if (activePage === 'home') {
+            setHomeData({
+              title: 'O que você está <br /> <span className="text-orange-500">procurando hoje?</span>',
+              subtitle: 'Tudo o que procuras, num só lugar'
+            });
+          } else {
+            setContent('');
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching page:", error);
+        toast.error("Erro ao carregar página");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPage();
+  }, [activePage]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const dataToSave = activePage === 'home' 
+        ? { ...homeData, updatedAt: new Date().toISOString() }
+        : { content, updatedAt: new Date().toISOString() };
+        
+      await setDoc(doc(db, 'pages', activePage), dataToSave, { merge: true });
+      toast.success("Página salva com sucesso!");
+    } catch (error) {
+      console.error("Error saving page:", error);
+      toast.error("Erro ao salvar página");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="flex border-b border-gray-100 overflow-x-auto">
+        {PAGES_TO_EDIT.map(page => (
+          <button
+            key={page.id}
+            onClick={() => setActivePage(page.id)}
+            className={cn(
+              "px-6 py-4 font-medium text-sm whitespace-nowrap transition-colors",
+              activePage === page.id 
+                ? "border-b-2 border-green-600 text-green-600" 
+                : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+            )}
+          >
+            {page.title}
+          </button>
+        ))}
+      </div>
+      
+      <div className="p-6">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">
+                {activePage === 'home' ? 'Editar Banner da Home' : 'Editar Conteúdo (Markdown)'}
+              </h3>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Salvar Alterações
+              </button>
+            </div>
+            
+            {activePage === 'home' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Título (suporta HTML)</label>
+                  <input
+                    type="text"
+                    value={homeData.title}
+                    onChange={(e) => setHomeData({ ...homeData, title: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Subtítulo</label>
+                  <input
+                    type="text"
+                    value={homeData.subtitle}
+                    onChange={(e) => setHomeData({ ...homeData, subtitle: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
+                  />
+                </div>
+              </div>
+            ) : (
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Digite o conteúdo em Markdown..."
+                className="w-full h-[500px] p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none font-mono text-sm"
+              />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<'products' | 'pages'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
 
   // Form State
@@ -50,7 +195,7 @@ export default function AdminPage() {
     location: 'Maputo',
     delivery: 'Não disponível',
     imageUrl: '',
-    sellerPhone: '+258840000000',
+    sellerContacts: ['+258840000000'],
   });
 
   useEffect(() => {
@@ -75,7 +220,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleAddProduct = async (e: React.FormEvent) => {
+  const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.price || !formData.imageUrl) {
       toast.error("Preencha todos os campos obrigatórios");
@@ -83,21 +228,38 @@ export default function AdminPage() {
     }
 
     try {
-      await addDoc(collection(db, 'products'), {
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        category: formData.category,
-        location: formData.location,
-        delivery: formData.delivery,
-        sellerPhone: formData.sellerPhone,
-        images: [formData.imageUrl],
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      toast.success("Produto publicado com sucesso!");
+      const validContacts = formData.sellerContacts.filter(c => c.trim() !== '');
+      if (editingId) {
+        await updateDoc(doc(db, 'products', editingId), {
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          category: formData.category,
+          location: formData.location,
+          delivery: formData.delivery,
+          sellerContacts: validContacts,
+          images: [formData.imageUrl],
+          updatedAt: new Date().toISOString(),
+        });
+        toast.success("Produto atualizado com sucesso!");
+      } else {
+        await addDoc(collection(db, 'products'), {
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          category: formData.category,
+          location: formData.location,
+          delivery: formData.delivery,
+          sellerContacts: validContacts,
+          images: [formData.imageUrl],
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        toast.success("Produto publicado com sucesso!");
+      }
       setIsAdding(false);
+      setEditingId(null);
       setFormData({
         title: '',
         description: '',
@@ -106,13 +268,28 @@ export default function AdminPage() {
         location: 'Maputo',
         delivery: 'Não disponível',
         imageUrl: '',
-        sellerPhone: '+258840000000',
+        sellerContacts: ['+258840000000'],
       });
       fetchProducts();
     } catch (error) {
-      console.error("Error adding product:", error);
-      toast.error("Erro ao publicar produto");
+      console.error("Error saving product:", error);
+      toast.error("Erro ao salvar produto");
     }
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setFormData({
+      title: product.title,
+      description: product.description,
+      price: product.price.toString(),
+      category: product.category,
+      location: product.location,
+      delivery: product.delivery || 'Não disponível',
+      imageUrl: product.images[0] || '',
+      sellerContacts: product.sellerContacts?.length ? product.sellerContacts : (product.sellerPhone ? [product.sellerPhone] : ['+258840000000']),
+    });
+    setEditingId(product.id);
+    setIsAdding(true);
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -233,29 +410,60 @@ export default function AdminPage() {
             <LayoutDashboard className="w-6 h-6 text-green-600" />
             Painel Administrativo
           </h1>
-          <p className="text-sm text-gray-500">Gerencie os produtos e serviços do MultiVendas</p>
+          <p className="text-sm text-gray-500">Gerencie os produtos, serviços e páginas do MultiVendas</p>
         </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={seedDatabase}
-            disabled={isSeeding}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-50 transition-all disabled:opacity-50"
-          >
-            {isSeeding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-yellow-500" />}
-            Popular Dados
-          </button>
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-100"
-          >
-            <Plus className="w-5 h-5" />
-            Adicionar Produto
-          </button>
-        </div>
+        {activeTab === 'products' && (
+          <div className="flex gap-2">
+            <button 
+              onClick={seedDatabase}
+              disabled={isSeeding}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-50 transition-all disabled:opacity-50"
+            >
+              {isSeeding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-yellow-500" />}
+              Popular Dados
+            </button>
+            <button 
+              onClick={() => setIsAdding(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-100"
+            >
+              <Plus className="w-5 h-5" />
+              Adicionar Produto
+            </button>
+          </div>
+        )}
       </header>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex gap-4 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('products')}
+          className={cn(
+            "pb-4 px-2 font-bold transition-colors border-b-2",
+            activeTab === 'products' 
+              ? "border-green-600 text-green-600" 
+              : "border-transparent text-gray-500 hover:text-gray-900"
+          )}
+        >
+          Produtos
+        </button>
+        <button
+          onClick={() => setActiveTab('pages')}
+          className={cn(
+            "pb-4 px-2 font-bold transition-colors border-b-2",
+            activeTab === 'pages' 
+              ? "border-green-600 text-green-600" 
+              : "border-transparent text-gray-500 hover:text-gray-900"
+          )}
+        >
+          Páginas
+        </button>
+      </div>
+
+      {activeTab === 'pages' ? (
+        <PagesEditor />
+      ) : (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
             <Package className="w-6 h-6" />
@@ -354,6 +562,17 @@ export default function AdminPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
+                          onClick={() => {
+                            const url = `${window.location.origin}/product/${product.id}`;
+                            const text = `Confira este produto na MultiVendas: ${product.title} por ${formatCurrency(product.price)}! ${url}`;
+                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                          }}
+                          className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                          title="Partilhar no WhatsApp"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
+                        <button 
                           onClick={() => handleMarkAsSold(product.id, product.status)}
                           className={cn(
                             "p-2 transition-colors",
@@ -363,7 +582,10 @@ export default function AdminPage() {
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                        <button 
+                          onClick={() => handleEditProduct(product)}
+                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                        >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button 
@@ -406,14 +628,31 @@ export default function AdminPage() {
               className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl overflow-hidden"
             >
               <div className="p-8 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Adicionar Produto</h2>
-                <button onClick={() => setIsAdding(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <h2 className="text-2xl font-bold text-gray-900">{editingId ? 'Editar Produto' : 'Adicionar Produto'}</h2>
+                <button 
+                  onClick={() => {
+                    setIsAdding(false);
+                    setEditingId(null);
+                    setFormData({
+                      title: '',
+                      description: '',
+                      price: '',
+                      category: 'Outros',
+                      location: 'Maputo',
+                      delivery: 'Não disponível',
+                      imageUrl: '',
+                      sellerContacts: ['+258840000000'],
+                    });
+                  }} 
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
                   <X className="w-6 h-6 text-gray-400" />
                 </button>
               </div>
 
-              <form onSubmit={handleAddProduct} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleSubmitProduct} className="flex flex-col max-h-[80vh]">
+                <div className="p-8 space-y-6 overflow-y-auto flex-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Título do Produto</label>
@@ -471,15 +710,46 @@ export default function AdminPage() {
                         <option value="A combinar">A combinar</option>
                       </select>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">WhatsApp de Contato (MultiVendas)</label>
-                      <input 
-                        type="text" 
-                        placeholder="+258 84 000 0000"
-                        className="w-full px-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-green-500 transition-all"
-                        value={formData.sellerPhone}
-                        onChange={e => setFormData({...formData, sellerPhone: e.target.value})}
-                      />
+                      {formData.sellerContacts.map((contact, index) => (
+                        <div key={index} className="flex gap-2">
+                          <input 
+                            type="text" 
+                            placeholder="+258 84 000 0000"
+                            className="w-full px-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-green-500 transition-all"
+                            value={contact}
+                            onChange={e => {
+                              const newContacts = [...formData.sellerContacts];
+                              newContacts[index] = e.target.value;
+                              setFormData({...formData, sellerContacts: newContacts});
+                            }}
+                          />
+                          {formData.sellerContacts.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newContacts = formData.sellerContacts.filter((_, i) => i !== index);
+                                setFormData({...formData, sellerContacts: newContacts});
+                              }}
+                              className="p-3 text-red-500 hover:bg-red-50 rounded-2xl transition-colors"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {formData.sellerContacts.length < 4 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({...formData, sellerContacts: [...formData.sellerContacts, '']});
+                          }}
+                          className="text-sm font-bold text-green-600 hover:text-green-700 flex items-center gap-1"
+                        >
+                          <PlusCircle className="w-4 h-4" /> Adicionar outro contato
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -526,11 +796,25 @@ export default function AdminPage() {
                     onChange={e => setFormData({...formData, description: e.target.value})}
                   />
                 </div>
+                </div>
 
-                <div className="pt-4 flex gap-4">
+                <div className="p-8 pt-4 border-t border-gray-100 flex gap-4 bg-white shrink-0">
                   <button 
                     type="button"
-                    onClick={() => setIsAdding(false)}
+                    onClick={() => {
+                      setIsAdding(false);
+                      setEditingId(null);
+                      setFormData({
+                        title: '',
+                        description: '',
+                        price: '',
+                        category: 'Outros',
+                        location: 'Maputo',
+                        delivery: 'Não disponível',
+                        imageUrl: '',
+                        sellerContacts: ['+258840000000'],
+                      });
+                    }}
                     className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all"
                   >
                     Cancelar
@@ -539,7 +823,7 @@ export default function AdminPage() {
                     type="submit"
                     className="flex-[2] py-4 bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition-all shadow-xl shadow-green-100"
                   >
-                    Adicionar Produto
+                    {editingId ? 'Salvar Alterações' : 'Adicionar Produto'}
                   </button>
                 </div>
               </form>
@@ -547,6 +831,8 @@ export default function AdminPage() {
           </div>
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   );
 }

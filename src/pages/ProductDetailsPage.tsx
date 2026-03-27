@@ -175,11 +175,15 @@ export default function ProductDetailsPage() {
           <ChevronLeft className="w-6 h-6 text-gray-900" />
         </button>
         <div className="flex gap-2">
-          <button className="p-2 bg-white rounded-full shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={() => {
+              const url = window.location.href;
+              const text = `Confira este produto na MultiVendas: ${product.title} por ${formatCurrency(product.price)}! ${url}`;
+              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+            }}
+            className="p-2 bg-white rounded-full shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors"
+          >
             <Share2 className="w-5 h-5 text-gray-600" />
-          </button>
-          <button className="p-2 bg-white rounded-full shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-            <Heart className="w-5 h-5 text-gray-600" />
           </button>
         </div>
       </div>
@@ -286,20 +290,40 @@ export default function ProductDetailsPage() {
             </div>
             
             <div className="flex flex-col gap-3">
-              <a 
-                href={product.status === 'sold' ? undefined : `https://wa.me/${product.sellerPhone?.replace(/\D/g, '') || '258840000000'}?text=Olá! Tenho interesse no produto: ${product.title}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "w-full py-4 text-white rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2",
-                  product.status === 'sold' 
-                    ? "bg-gray-400 cursor-not-allowed shadow-none pointer-events-none" 
-                    : "bg-green-500 hover:bg-green-600 shadow-green-100"
-                )}
-              >
-                <Phone className="w-5 h-5" />
-                {product.status === 'sold' ? 'Produto Indisponível' : `WhatsApp (MultiVendas)`}
-              </a>
+              {product.sellerContacts && product.sellerContacts.length > 0 ? (
+                product.sellerContacts.map((contact, index) => (
+                  <a 
+                    key={index}
+                    href={product.status === 'sold' ? undefined : `https://wa.me/${contact.replace(/\D/g, '')}?text=Olá! Tenho interesse no produto: ${product.title}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "w-full py-4 text-white rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2",
+                      product.status === 'sold' 
+                        ? "bg-gray-400 cursor-not-allowed shadow-none pointer-events-none" 
+                        : "bg-green-500 hover:bg-green-600 shadow-green-100"
+                    )}
+                  >
+                    <Phone className="w-5 h-5" />
+                    {product.status === 'sold' ? 'Produto Indisponível' : `WhatsApp ${product.sellerContacts!.length > 1 ? index + 1 : ''} (MultiVendas)`}
+                  </a>
+                ))
+              ) : (
+                <a 
+                  href={product.status === 'sold' ? undefined : `https://wa.me/${product.sellerPhone?.replace(/\D/g, '') || '258840000000'}?text=Olá! Tenho interesse no produto: ${product.title}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "w-full py-4 text-white rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2",
+                    product.status === 'sold' 
+                      ? "bg-gray-400 cursor-not-allowed shadow-none pointer-events-none" 
+                      : "bg-green-500 hover:bg-green-600 shadow-green-100"
+                  )}
+                >
+                  <Phone className="w-5 h-5" />
+                  {product.status === 'sold' ? 'Produto Indisponível' : `WhatsApp (MultiVendas)`}
+                </a>
+              )}
               
               <button 
                 onClick={handleMessage}
@@ -318,7 +342,7 @@ export default function ProductDetailsPage() {
             
             <div className="pt-4 border-t border-gray-50 flex items-center gap-3 text-green-600">
               <ShieldCheck className="w-5 h-5" />
-              <p className="text-xs font-medium">Negocie com Segurança pela Agência Linka Mais</p>
+              <p className="text-xs font-medium">Negocie com Segurança pela MultiVendas</p>
             </div>
           </div>
 

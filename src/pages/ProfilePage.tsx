@@ -269,11 +269,6 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
             <div className="flex items-center justify-center md:justify-start gap-8 pt-4">
               <div className="text-center md:text-left">
                 <p className="text-2xl font-black text-gray-900">0</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Favoritos</p>
-              </div>
-              <div className="w-px h-10 bg-gray-100"></div>
-              <div className="text-center md:text-left">
-                <p className="text-2xl font-black text-gray-900">0</p>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Avaliações</p>
               </div>
             </div>

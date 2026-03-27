@@ -64,7 +64,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-auto gap-2">
-            <p className="text-lg font-black text-gray-900 truncate">
+            <p className="text-base font-black text-gray-900 truncate">
               {formatCurrency(product.price)}
             </p>
             <div className="w-8 h-8 shrink-0 bg-green-50 rounded-full flex items-center justify-center text-green-600 group-hover:bg-green-600 group-hover:text-white transition-all">

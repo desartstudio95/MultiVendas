@@ -39,7 +39,8 @@ import {
   Eye,
   EyeOff,
   Menu,
-  X
+  X,
+  Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -94,6 +95,7 @@ function Layout({ children, userProfile, user }: { children: React.ReactNode, us
   ];
 
   if (isAdmin) {
+    navItems.splice(2, 0, { path: '/portal-admin-secreto', icon: PlusCircle, label: 'Publicar', isAction: true } as any);
     navItems.push({ path: '/portal-admin-secreto', icon: ShieldCheck, label: 'Admin' });
   }
 
@@ -213,13 +215,15 @@ function Layout({ children, userProfile, user }: { children: React.ReactNode, us
                   {navItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     const Icon = item.icon;
+                    const isAction = (item as any).isAction;
                     return (
                       <Link
-                        key={item.path}
+                        key={item.label}
                         to={item.path}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className={cn(
                           "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                          isAction ? "bg-green-600 text-white shadow-md shadow-green-200" :
                           isActive ? "bg-green-50 text-green-600" : "text-gray-600 hover:bg-gray-50"
                         )}
                       >
@@ -281,10 +285,10 @@ function Layout({ children, userProfile, user }: { children: React.ReactNode, us
               A loja virtual mais confiável de Moçambique. Encontre os melhores produtos com segurança e tecnologia.
             </p>
             <div className="flex items-center gap-4">
-              <a href="#" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-green-600 hover:text-white transition-all">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-green-600 hover:text-white transition-all">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-green-600 hover:text-white transition-all">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-green-600 hover:text-white transition-all">
                 <Instagram className="w-5 h-5" />
               </a>
             </div>
@@ -335,10 +339,23 @@ function Layout({ children, userProfile, user }: { children: React.ReactNode, us
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
+          const isAction = (item as any).isAction;
+
+          if (isAction) {
+            return (
+              <Link 
+                key={item.label}
+                to={item.path}
+                className="flex items-center justify-center w-12 h-12 bg-green-600 text-white rounded-full shadow-lg shadow-green-200 -mt-6 border-4 border-white"
+              >
+                <Icon className="w-6 h-6" />
+              </Link>
+            );
+          }
 
           return (
             <Link 
-              key={item.path}
+              key={item.label}
               to={item.path}
               className={cn(
                 "flex flex-col items-center gap-1 transition-colors",
