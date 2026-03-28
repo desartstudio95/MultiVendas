@@ -25,7 +25,9 @@ import {
   Apple, 
   Construction, 
   Briefcase, 
-  Box 
+  Box,
+  Dog,
+  Beer
 } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -37,6 +39,8 @@ const CATEGORY_ICONS: Record<string, any> = {
   'Alimentos': Apple,
   'Construção': Construction,
   'Escritório': Briefcase,
+  'Ração': Dog,
+  'Bebidas': Beer,
   'Outros': Box,
 };
 
@@ -49,6 +53,8 @@ const CATEGORIES: Category[] = [
   { id: '6', name: 'Alimentos', icon: 'Apple' },
   { id: '7', name: 'Construção', icon: 'Construction' },
   { id: '8', name: 'Escritório', icon: 'Briefcase' },
+  { id: '10', name: 'Ração', icon: 'Dog' },
+  { id: '11', name: 'Bebidas', icon: 'Beer' },
   { id: '9', name: 'Outros', icon: 'Box' },
 ];
 

@@ -36,6 +36,8 @@ const CATEGORIES = [
   { name: 'Alimentos', icon: 'Apple' },
   { name: 'Construção', icon: 'Construction' },
   { name: 'Escritório', icon: 'Briefcase' },
+  { name: 'Ração', icon: 'Dog' },
+  { name: 'Bebidas', icon: 'Beer' },
   { name: 'Outros', icon: 'Box' }
 ];
 
@@ -404,7 +406,7 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <LayoutDashboard className="w-6 h-6 text-green-600" />
@@ -413,18 +415,18 @@ export default function AdminPage() {
           <p className="text-sm text-gray-500">Gerencie os produtos, serviços e páginas do MultiVendas</p>
         </div>
         {activeTab === 'products' && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button 
               onClick={seedDatabase}
               disabled={isSeeding}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-50 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-50 transition-all disabled:opacity-50 text-sm"
             >
               {isSeeding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-yellow-500" />}
               Popular Dados
             </button>
             <button 
               onClick={() => setIsAdding(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-100"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-100 text-sm"
             >
               <Plus className="w-5 h-5" />
               Adicionar Produto

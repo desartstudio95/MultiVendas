@@ -17,6 +17,8 @@ import {
   Apple, 
   Construction, 
   Briefcase, 
+  Dog,
+  Beer,
 } from 'lucide-react';
 
 export const CATEGORY_ICONS: Record<string, any> = {
@@ -28,6 +30,8 @@ export const CATEGORY_ICONS: Record<string, any> = {
   'Alimentos': Apple,
   'Construção': Construction,
   'Escritório': Briefcase,
+  'Ração': Dog,
+  'Bebidas': Beer,
   'Outros': Box,
 };
 
@@ -40,6 +44,8 @@ const CATEGORIES: Category[] = [
   { id: '6', name: 'Alimentos', icon: 'Apple' },
   { id: '7', name: 'Construção', icon: 'Construction' },
   { id: '8', name: 'Escritório', icon: 'Briefcase' },
+  { id: '10', name: 'Ração', icon: 'Dog' },
+  { id: '11', name: 'Bebidas', icon: 'Beer' },
   { id: '9', name: 'Outros', icon: 'Box' },
 ];
 
@@ -114,9 +120,9 @@ export default function HomePage() {
           >
             <h1 
               className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight tracking-tight"
-              dangerouslySetInnerHTML={{ __html: homeData.title.replace('text-yellow-400', 'text-orange-500') }}
+              dangerouslySetInnerHTML={{ __html: homeData.title }}
             />
-            <p className="text-green-50 text-lg md:text-xl font-medium mb-8 max-w-lg opacity-90">
+            <p className="text-green-50 text-sm md:text-base font-medium mb-8 max-w-lg opacity-90">
               {homeData.subtitle}
             </p>
             <div className="flex items-center gap-3 text-white/90 text-sm font-medium bg-white/10 backdrop-blur-md w-fit px-4 py-2 rounded-full border border-white/20">
