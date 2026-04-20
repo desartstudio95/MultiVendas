@@ -87,6 +87,46 @@ const CATEGORIES: Category[] = [
 
 const PRODUCTS_PER_PAGE = 6;
 
+function ScrollToTopButton() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const toggleVisibility = () => {
+      if (window.pageYOffset > 300) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    };
+
+    window.addEventListener('scroll', toggleVisibility);
+    return () => window.removeEventListener('scroll', toggleVisibility);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          onClick={scrollToTop}
+          className="fixed bottom-24 md:bottom-8 right-6 z-50 p-4 bg-green-600 text-white rounded-full shadow-2xl shadow-green-200 hover:bg-green-700 transition-all font-sans"
+        >
+          <ChevronRight className="w-6 h-6 -rotate-90" />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function CategoriesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get('cat') || 'Todos';
@@ -175,6 +215,7 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-8">
+      <ScrollToTopButton />
       {/* Header & Search */}
       <header className="space-y-6">
         <div className="flex items-center justify-between">
@@ -306,11 +347,22 @@ export default function CategoriesPage() {
             </div>
           ) : paginatedProducts.length > 0 ? (
             <div className="space-y-8">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+              <motion.div 
+                layout
+                className="grid grid-cols-2 lg:grid-cols-3 gap-6"
+              >
                 {paginatedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <ProductCard product={product} />
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
               {/* Pagination Controls */}
               {totalPages > 1 && (

@@ -596,14 +596,14 @@ function AuthRequiredView({ setUserProfile, setUser }: { setUserProfile: (profil
 
   if (verificationSentTo) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md bg-white p-8 rounded-[40px] border border-gray-100 shadow-2xl shadow-green-100/50 space-y-8 text-center">
-          <div className="w-16 h-16 bg-green-50 rounded-3xl flex items-center justify-center text-green-600 mx-auto mb-4">
-            <Mail className="w-8 h-8" />
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md bg-white p-6 sm:p-8 rounded-3xl sm:rounded-[40px] border border-gray-100 shadow-2xl shadow-green-100/50 space-y-6 sm:space-y-8 text-center">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-50 rounded-2xl sm:rounded-3xl flex items-center justify-center text-green-600 mx-auto mb-2 sm:mb-4">
+            <Mail className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight">Verifique seu e-mail</h2>
-          <p className="text-gray-500 text-sm font-medium">
-            Enviamos um e-mail de verificação para <span className="text-green-600 font-bold">{verificationSentTo}</span>. 
+          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Verifique seu e-mail</h2>
+          <p className="text-gray-500 text-xs sm:text-sm font-medium">
+            Enviamos um e-mail de verificação para <span className="text-green-600 font-bold break-all">{verificationSentTo}</span>. 
             Verifique-o e faça o login para acessar sua conta.
           </p>
           <button 
@@ -611,7 +611,7 @@ function AuthRequiredView({ setUserProfile, setUser }: { setUserProfile: (profil
               setVerificationSentTo(null);
               setAuthMode('login');
             }}
-            className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all"
+            className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all font-sans"
           >
             Ir para Login
           </button>
@@ -621,16 +621,16 @@ function AuthRequiredView({ setUserProfile, setUser }: { setUserProfile: (profil
   }
 
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-white p-8 rounded-[40px] border border-gray-100 shadow-2xl shadow-green-100/50 space-y-8">
+    <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
+      <div className="w-full max-w-md bg-white p-6 sm:p-8 rounded-3xl sm:rounded-[40px] border border-gray-100 shadow-2xl shadow-green-100/50 space-y-6 sm:space-y-8">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-green-50 rounded-3xl flex items-center justify-center text-green-600 mx-auto mb-4">
-            <ShieldCheck className="w-8 h-8" />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-50 rounded-2xl sm:rounded-3xl flex items-center justify-center text-green-600 mx-auto mb-2 sm:mb-4">
+            <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
             {authMode === 'login' ? 'Bem-vindo de volta' : authMode === 'register' ? 'Crie sua conta' : 'Recuperar Senha'}
           </h2>
-          <p className="text-gray-500 text-sm font-medium">
+          <p className="text-gray-500 text-xs sm:text-sm font-medium leading-relaxed">
             {authMode === 'login' 
               ? 'Entre para acessar suas mensagens e perfil.' 
               : authMode === 'register' 
@@ -641,24 +641,24 @@ function AuthRequiredView({ setUserProfile, setUser }: { setUserProfile: (profil
 
         {/* Auth Tabs */}
         {authMode !== 'forgot-password' && (
-          <div className="flex p-1 bg-gray-50 rounded-2xl">
+          <div className="flex p-1 bg-gray-50 rounded-xl sm:rounded-2xl">
             <button 
               onClick={() => setAuthMode('login')}
               className={cn(
-                "flex-1 py-2 text-xs font-bold rounded-xl transition-all",
+                "flex-1 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl transition-all uppercase tracking-wider",
                 authMode === 'login' ? "bg-white text-green-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
               )}
             >
-              LOGIN
+              Entrar
             </button>
             <button 
               onClick={() => setAuthMode('register')}
               className={cn(
-                "flex-1 py-2 text-xs font-bold rounded-xl transition-all",
+                "flex-1 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl transition-all uppercase tracking-wider",
                 authMode === 'register' ? "bg-white text-green-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
               )}
             >
-              CADASTRO
+              Cadastrar
             </button>
           </div>
         )}
@@ -760,17 +760,17 @@ function AuthRequiredView({ setUserProfile, setUser }: { setUserProfile: (profil
           <button 
             type="submit"
             disabled={isSigningIn}
-            className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all disabled:opacity-50"
+            className="w-full py-3.5 sm:py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all disabled:opacity-50"
           >
             {isSigningIn ? 'Processando...' : (authMode === 'login' ? 'Entrar' : authMode === 'register' ? 'Criar Conta' : 'Get Reset Link')}
           </button>
 
           {authMode !== 'forgot-password' && (
-            <div className="relative py-4">
+            <div className="relative py-2 sm:py-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-100"></div>
               </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
+              <div className="relative flex justify-center text-[9px] sm:text-[10px] uppercase font-bold tracking-widest">
                 <span className="bg-white px-4 text-gray-400">Ou continue com</span>
               </div>
             </div>
@@ -781,7 +781,7 @@ function AuthRequiredView({ setUserProfile, setUser }: { setUserProfile: (profil
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isSigningIn}
-              className="w-full py-4 bg-white border border-gray-100 text-gray-700 rounded-2xl font-bold shadow-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              className="w-full py-3.5 sm:py-4 bg-white border border-gray-100 text-gray-700 rounded-2xl font-bold shadow-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -810,30 +810,40 @@ function AuthRequiredView({ setUserProfile, setUser }: { setUserProfile: (profil
 
 function RestrictedAreaView({ title, message }: { title?: string, message?: string }) {
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
-      <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-600 mb-6">
-        <ShieldCheck className="w-10 h-10" />
+    <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 py-8 text-center">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-50 rounded-full flex items-center justify-center text-red-600 mb-6">
+        <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10" />
       </div>
-      <h2 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">{title || 'Área Restrita'}</h2>
-      <p className="text-gray-500 max-w-md mb-8 font-medium">
+      <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-4 tracking-tight">{title || 'Área Restrita'}</h2>
+      <p className="text-gray-500 text-sm sm:text-base max-w-md mb-8 font-medium">
         {message || 'Esta seção é exclusiva para usuários cadastrados. Por favor, faça login ou crie uma conta para continuar.'}
       </p>
-      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full max-w-sm">
         <Link 
           to="/auth" 
-          className="flex-1 py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all"
+          className="flex-1 py-3.5 sm:py-4 bg-green-600 text-white rounded-xl sm:rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all"
         >
           Entrar agora
         </Link>
         <Link 
           to="/" 
-          className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+          className="flex-1 py-3.5 sm:py-4 bg-gray-100 text-gray-600 rounded-xl sm:rounded-2xl font-bold hover:bg-gray-200 transition-all"
         >
           Voltar ao início
         </Link>
       </div>
     </div>
   );
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  
+  return null;
 }
 
 function MaintenanceView() {
@@ -935,6 +945,7 @@ export default function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <Layout userProfile={userProfile} user={user} setUser={setUser} setUserProfile={setUserProfile}>
         <Routes>
           <Route path="/" element={<HomePage />} />

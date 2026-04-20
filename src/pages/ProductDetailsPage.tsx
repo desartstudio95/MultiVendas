@@ -21,7 +21,8 @@ import {
   Star,
   User,
   Send,
-  Truck
+  Truck,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ export default function ProductDetailsPage() {
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -148,8 +150,9 @@ export default function ProductDetailsPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover cursor-zoom-in"
                 referrerPolicy="no-referrer"
+                onClick={() => setIsZoomOpen(true)}
               />
             </AnimatePresence>
             
@@ -194,7 +197,13 @@ export default function ProductDetailsPage() {
                     i === currentImageIndex ? "border-green-600 scale-95" : "border-transparent opacity-60 hover:opacity-100"
                   )}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <img 
+                    src={img} 
+                    alt="" 
+                    className="w-full h-full object-cover" 
+                    referrerPolicy="no-referrer" 
+                    loading="lazy"
+                  />
                 </button>
               ))}
             </div>
@@ -333,6 +342,53 @@ export default function ProductDetailsPage() {
       </div>
 
       {/* Reviews Section */}
+      <AnimatePresence>
+        {isZoomOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-8"
+            onClick={() => setIsZoomOpen(false)}
+          >
+            <button 
+              className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-[110]"
+              onClick={() => setIsZoomOpen(false)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
+              <motion.img
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                src={product.images[currentImageIndex]}
+                alt={product.title}
+                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            
+            {product.images.length > 1 && (
+              <>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); prevImage(); }}
+                  className="absolute left-6 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); nextImage(); }}
+                  className="absolute right-6 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                >
+                  <ChevronRightIcon className="w-8 h-8" />
+                </button>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <section className="pt-8 border-t border-gray-100 space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">

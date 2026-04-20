@@ -156,38 +156,38 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Profile Header */}
-      <section className="relative bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+      <section className="relative bg-white p-6 sm:p-8 rounded-3xl sm:rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
         {/* Background Accent */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-green-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50" />
         
-        <div className="relative flex flex-col md:flex-row items-center gap-8">
+        <div className="relative flex flex-col md:flex-row items-center gap-6 sm:gap-8">
           <div className="relative group">
             <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
             <img 
               src={userProfile.photoURL} 
               alt={userProfile.displayName} 
-              className="relative w-32 h-32 rounded-full border-4 border-white shadow-xl object-cover"
+              className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-xl object-cover"
             />
-            <div className="absolute bottom-1 right-1 w-10 h-10 bg-green-600 rounded-full border-4 border-white flex items-center justify-center text-white shadow-lg">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="absolute bottom-0 right-0 sm:bottom-1 sm:right-1 w-8 h-8 sm:w-10 sm:h-10 bg-green-600 rounded-full border-2 sm:border-4 border-white flex items-center justify-center text-white shadow-lg">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
           
-          <div className="flex-1 text-center md:text-left space-y-3">
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <h1 className="text-3xl font-black text-gray-900 tracking-tight">{userProfile.displayName}</h1>
+          <div className="flex-1 text-center md:text-left space-y-2 sm:space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center gap-2 sm:gap-3">
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">{userProfile.displayName}</h1>
               <div className="flex items-center gap-2 mx-auto md:mx-0">
-                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">
                   {userProfile.role}
                 </span>
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Verificado
+                <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                  <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 h-3" /> Verificado
                 </span>
               </div>
             </div>
-            <p className="text-gray-500 font-medium flex items-center justify-center md:justify-start gap-2">
+            <p className="text-gray-500 font-medium text-xs sm:text-sm flex items-center justify-center md:justify-start gap-1.5">
               <AlertCircle className="w-4 h-4 text-gray-400" />
-              {userProfile.email}
+              <span className="break-all">{userProfile.email}</span>
             </p>
 
             {(userProfile.role === 'admin' || userProfile.email === 'isacruimugabe@gmail.com') && (
@@ -210,11 +210,11 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 w-full md:w-auto">
+          <div className="flex flex-col gap-2 sm:gap-3 w-full md:w-auto mt-4 sm:mt-0">
             <button 
               onClick={() => setActiveTab('settings')}
               className={cn(
-                "px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-gray-200",
+                "px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-gray-200",
                 activeTab === 'settings' ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-gray-800"
               )}
             >
@@ -223,7 +223,7 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
             </button>
             <button 
               onClick={logout}
-              className="px-8 py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+              className="px-6 sm:px-8 py-3 sm:py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-2"
             >
               <LogOut className="w-5 h-5" />
               Sair
@@ -240,16 +240,16 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
             <button 
               onClick={() => setActiveTab('notifications')}
               className={cn(
-                "p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-3 transition-all hover:scale-105 hover:shadow-md bg-white group relative",
+                "p-4 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 sm:gap-3 transition-all hover:scale-105 hover:shadow-md bg-white group relative",
                 activeTab === 'notifications' ? "ring-2 ring-purple-500" : ""
               )}
             >
-              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-purple-50 text-purple-600")}>
-                <Bell className="w-6 h-6" />
+              <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-purple-50 text-purple-600")}>
+                <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <span className="font-bold text-xs text-gray-900">Notificações</span>
+              <span className="font-bold text-[10px] sm:text-xs text-gray-900">Notificações</span>
               {notifications.filter(n => !n.read).length > 0 && (
-                <span className="absolute top-4 right-4 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                <span className="absolute top-2 right-2 sm:top-4 sm:right-4 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                   {notifications.filter(n => !n.read).length}
                 </span>
               )}
@@ -258,14 +258,14 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
             <button 
               onClick={() => setActiveTab('settings')}
               className={cn(
-                "p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-3 transition-all hover:scale-105 hover:shadow-md bg-white group",
+                "p-4 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 sm:gap-3 transition-all hover:scale-105 hover:shadow-md bg-white group",
                 activeTab === 'settings' ? "ring-2 ring-orange-500" : ""
               )}
             >
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-orange-50 text-orange-600">
-                <UserIcon className="w-6 h-6" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-orange-50 text-orange-600">
+                <UserIcon className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <span className="font-bold text-xs text-gray-900">Dados Pessoais</span>
+              <span className="font-bold text-[10px] sm:text-xs text-gray-900">Dados Pessoais</span>
             </button>
           </div>
         </div>
@@ -371,14 +371,14 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-6"
               >
-                <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                <div className="bg-white p-6 sm:p-8 rounded-3xl sm:rounded-[40px] border border-gray-100 shadow-sm space-y-6 sm:space-y-8">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
-                      <Settings className="w-6 h-6" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-green-600">
+                      <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-gray-900 tracking-tight">Configurações do Perfil</h2>
-                      <p className="text-sm text-gray-500 font-medium">Atualize suas informações pessoais.</p>
+                      <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">Configurações do Perfil</h2>
+                      <p className="text-xs sm:text-sm text-gray-500 font-medium">Atualize suas informações pessoais.</p>
                     </div>
                   </div>
 

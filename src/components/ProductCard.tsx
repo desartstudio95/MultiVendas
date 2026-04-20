@@ -25,6 +25,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             alt={product.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             referrerPolicy="no-referrer"
+            loading="lazy"
           />
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 max-w-[calc(100%-1.5rem)]">
             <span className="px-2 py-0.5 bg-white/90 backdrop-blur-md text-gray-900 text-[9px] font-bold uppercase tracking-widest rounded-full shadow-sm flex items-center gap-1 w-fit max-w-full">

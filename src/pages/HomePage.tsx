@@ -3,7 +3,7 @@ import { Product, Category } from '../types';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import { MapPin, ChevronRight, Package, Box } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import ProductCard from '../components/ProductCard';
 import { MOCK_PRODUCTS, MOCK_PAGES } from '../mockData';
@@ -75,6 +75,46 @@ const CATEGORIES: Category[] = [
   { id: '9', name: 'Outros', icon: 'Box' },
 ];
 
+function ScrollToTopButton() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const toggleVisibility = () => {
+      if (window.pageYOffset > 300) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    };
+
+    window.addEventListener('scroll', toggleVisibility);
+    return () => window.removeEventListener('scroll', toggleVisibility);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          onClick={scrollToTop}
+          className="fixed bottom-24 md:bottom-8 right-6 z-50 p-4 bg-green-600 text-white rounded-full shadow-2xl shadow-green-200 hover:bg-green-700 transition-all font-sans"
+        >
+          <ChevronRight className="w-6 h-6 -rotate-90" />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,6 +172,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
+      <ScrollToTopButton />
       {/* Hero / Search Section */}
       <section className="relative h-64 md:h-80 rounded-[40px] overflow-hidden flex items-center px-8 shadow-2xl shadow-green-100 group">
         {/* Background Image with Overlay */}
@@ -141,6 +182,7 @@ export default function HomePage() {
             alt="MultiVendas Background" 
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             referrerPolicy="no-referrer"
+            loading="eager"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-green-900/90 via-green-800/60 to-transparent"></div>
         </div>
