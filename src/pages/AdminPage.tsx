@@ -3,7 +3,7 @@ import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { MOCK_PRODUCTS, MOCK_PAGES } from '../mockData';
 import { db, storage } from '../lib/firebase';
-import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   Plus, 
@@ -28,7 +28,9 @@ import {
   Upload,
   RefreshCw,
   Copy,
-  Check
+  Check,
+  Wrench,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -175,13 +177,15 @@ function PagesEditor() {
 }
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'products' | 'pages'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'pages' | 'settings'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -199,7 +203,35 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchProducts();
+    fetchAppSettings();
   }, []);
+
+  const fetchAppSettings = async () => {
+    try {
+      const configDoc = await getDoc(doc(db, 'config', 'app'));
+      if (configDoc.exists()) {
+        setIsMaintenance(configDoc.data().maintenance || false);
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
+
+  const toggleMaintenance = async () => {
+    setSavingSettings(true);
+    try {
+      await setDoc(doc(db, 'config', 'app'), { 
+        maintenance: !isMaintenance,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      setIsMaintenance(!isMaintenance);
+      toast.success(isMaintenance ? "Modo de manutenção desativado!" : "Modo de manutenção ativado!");
+    } catch (error: any) {
+      toast.error("Erro ao alterar configurações: " + error.message);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -356,16 +388,25 @@ export default function AdminPage() {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (formData.imageUrls.length + files.length > 10) {
+      toast.error("Máximo de 10 imagens por produto");
+      return;
+    }
 
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setFormData(prev => ({ ...prev, imageUrls: [...prev.imageUrls, url] }));
-      toast.success('Imagem carregada no Storage!');
+      const uploadPromises = files.map(async (file) => {
+        const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        return await getDownloadURL(storageRef);
+      });
+
+      const urls = await Promise.all(uploadPromises);
+      setFormData(prev => ({ ...prev, imageUrls: [...prev.imageUrls, ...urls] }));
+      toast.success(`${urls.length} imagens carregadas com sucesso!`);
     } catch (error: any) {
       toast.error("Erro no upload: " + error.message);
     } finally {
@@ -436,9 +477,59 @@ export default function AdminPage() {
         >
           Páginas
         </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={cn(
+            "pb-4 px-2 font-bold transition-colors border-b-2",
+            activeTab === 'settings' 
+              ? "border-green-600 text-green-600" 
+              : "border-transparent text-gray-500 hover:text-gray-900"
+          )}
+        >
+          Manutenção
+        </button>
       </div>
 
-      {activeTab === 'pages' ? (
+      {activeTab === 'settings' ? (
+        <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-orange-500" />
+                Configurações da Aplicação
+              </h3>
+              <p className="text-sm text-gray-500">Gerencie o status global do MultiVendas</p>
+            </div>
+          </div>
+
+          <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="font-bold text-gray-900">Modo de Manutenção</p>
+              <p className="text-xs text-gray-500">Quando ativado, os usuários verão uma tela de aviso e não poderão usar o app.</p>
+            </div>
+            <button
+              onClick={toggleMaintenance}
+              disabled={savingSettings}
+              className={cn(
+                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50",
+                isMaintenance ? "bg-green-600" : "bg-gray-200"
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                  isMaintenance ? "translate-x-6" : "translate-x-1"
+                )}
+              />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 p-4 bg-orange-50 text-orange-700 rounded-2xl text-xs font-medium border border-orange-100">
+            <AlertCircle className="w-5 h-5" />
+            Atenção: Ativar o modo de manutenção desconectará todos os usuários das funcionalidades principais.
+          </div>
+        </div>
+      ) : activeTab === 'pages' ? (
         <PagesEditor />
       ) : (
         <>
@@ -802,6 +893,7 @@ export default function AdminPage() {
                           ref={fileInputRef}
                           className="hidden"
                           accept="image/*"
+                          multiple
                           onChange={handleImageUpload}
                         />
                         <p className="text-[8px] text-gray-400 mt-2 uppercase tracking-widest text-center">Arraste para reordenar (Em breve) | Máximo 10 imagens</p>

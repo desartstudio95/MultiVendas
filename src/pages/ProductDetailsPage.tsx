@@ -217,7 +217,7 @@ export default function ProductDetailsPage() {
                 <Clock className="w-3 h-3" /> Publicado hoje
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 leading-tight">{product.title}</h1>
+            <h1 className="text-xl font-bold text-gray-900 leading-tight">{product.title}</h1>
             <div className="flex items-center gap-2 text-gray-500">
               <MapPin className="w-4 h-4" />
               <span className="text-sm font-medium">{product.location}, Moçambique</span>
@@ -227,7 +227,7 @@ export default function ProductDetailsPage() {
           <div className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black text-gray-900">{formatCurrency(product.price)}</span>
+                <span className="text-2xl font-black text-gray-900">{formatCurrency(product.price)}</span>
               </div>
               {product.status === 'sold' && (
                 <span className="px-4 py-1.5 bg-red-100 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest border border-red-200">
@@ -336,7 +336,7 @@ export default function ProductDetailsPage() {
       <section className="pt-8 border-t border-gray-100 space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h2 className="text-2xl font-bold text-gray-900">Avaliações</h2>
+            <h2 className="text-xl font-bold text-gray-900">Avaliações</h2>
             <p className="text-sm text-gray-500">O que outros compradores dizem sobre este produto.</p>
           </div>
           {userHasPurchased && !showReviewForm && (

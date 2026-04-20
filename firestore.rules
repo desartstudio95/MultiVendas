@@ -39,5 +39,12 @@ service cloud.firestore {
       // Allow only admins to write products
       allow write: if isAdmin();
     }
+
+    match /config/app {
+      // Allow anyone to read the app config (for maintenance mode check)
+      allow read: if true;
+      // Allow only admins to update the config
+      allow write: if isAdmin();
+    }
   }
 }

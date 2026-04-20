@@ -29,7 +29,9 @@ import {
   Menu,
   X,
   Heart,
-  Camera
+  Camera,
+  Wrench,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from './lib/utils';
@@ -48,7 +50,7 @@ import SecurityPage from './pages/SecurityPage';
 import { auth, db } from './lib/firebase';
 import { uploadProfilePhoto } from './lib/storage';
 import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 
 function Layout({ children, userProfile, user, setUser, setUserProfile }: { 
   children: React.ReactNode, 
@@ -834,13 +836,48 @@ function RestrictedAreaView({ title, message }: { title?: string, message?: stri
   );
 }
 
+function MaintenanceView() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
+      <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 mb-8 border-4 border-white shadow-xl animate-bounce">
+        <Wrench className="w-12 h-12" />
+      </div>
+      <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">Estamos em <span className="text-orange-500">Manutenção</span></h1>
+      <p className="text-gray-500 max-w-md text-lg font-medium leading-relaxed mb-8">
+        O MultiVendas está passando por atualizações rápidas para melhorar sua experiência. Voltaremos em breve!
+      </p>
+      <div className="flex gap-4">
+        <div className="px-6 py-2 bg-white rounded-full border border-gray-100 shadow-sm text-xs font-bold text-gray-400 uppercase tracking-widest">
+          #MultiVendas2024
+        </div>
+      </div>
+      <div className="absolute bottom-8 text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">
+        © 2024 MultiVendas · Tecnologia & Comércio
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState<any | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMaintenance, setIsMaintenance] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+    // Listen for maintenance mode
+    const configUnsubscribe = onSnapshot(doc(db, 'config', 'app'), 
+      (doc) => {
+        if (doc.exists()) {
+          setIsMaintenance(doc.data().maintenance || false);
+        }
+      },
+      (error) => {
+        console.warn("Maintenance mode check could not be completed (likely permissions). Defaulting to active.", error);
+      }
+    );
+
+    const authUnsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser && authUser.emailVerified) {
         setUser(authUser);
         try {
@@ -870,7 +907,10 @@ export default function App() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      authUnsubscribe();
+      configUnsubscribe();
+    };
   }, []);
 
   if (loading) {
@@ -881,6 +921,15 @@ export default function App() {
           <p className="text-gray-500 font-medium">Carregando MultiVendas...</p>
         </div>
       </div>
+    );
+  }
+
+  if (isMaintenance && userProfile?.role !== 'admin') {
+    return (
+      <Router>
+        <MaintenanceView />
+        <Toaster position="top-center" />
+      </Router>
     );
   }
 
