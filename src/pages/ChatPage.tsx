@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import { UserProfile } from '../types';
 import { 
   Send, 
@@ -11,10 +9,11 @@ import {
   Clock,
   CheckCircle2
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import Markdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function ChatPage({ userProfile }: { userProfile: UserProfile | null }) {
   const [messages, setMessages] = useState<any[]>([]);
@@ -56,30 +55,16 @@ export default function ChatPage({ userProfile }: { userProfile: UserProfile | n
     setInputText('');
     setIsTyping(true);
 
-    // Support mode (simulated but with real notification)
-    try {
-      await addDoc(collection(db, 'notifications'), {
-        userId: 'admin',
-        title: 'Nova Mensagem de Suporte',
-        message: `${userProfile?.displayName || 'Um usuário'} enviou uma mensagem: ${inputText.substring(0, 50)}...`,
-        type: 'message',
-        read: false,
+    // Support mode (simulated)
+    setTimeout(() => {
+      setMessages(prev => [...prev, {
+        id: Date.now().toString() + '-support',
+        senderId: 'support',
+        text: 'Recebemos sua mensagem. Um de nossos agentes responderá em breve via WhatsApp ou Email. (Simulado)',
         createdAt: new Date().toISOString(),
-      });
-
-      setTimeout(() => {
-        setMessages(prev => [...prev, {
-          id: Date.now().toString() + '-support',
-          senderId: 'support',
-          text: 'Recebemos sua mensagem. Um de nossos agentes responderá em breve via WhatsApp ou Email.',
-          createdAt: new Date().toISOString(),
-        }]);
-        setIsTyping(false);
-      }, 1500);
-    } catch (error) {
-      console.error("Error creating support notification:", error);
+      }]);
       setIsTyping(false);
-    }
+    }, 1500);
   };
 
   return (

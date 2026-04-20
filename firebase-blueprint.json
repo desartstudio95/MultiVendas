@@ -1,8 +1,8 @@
 {
   "entities": {
-    "users": {
+    "UserProfile": {
       "title": "User Profile",
-      "description": "User profile information",
+      "description": "Information about a registered user",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
@@ -10,108 +10,40 @@
         "email": { "type": "string" },
         "photoURL": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "client"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "emailVerified": { "type": "boolean" }
       },
-      "required": ["uid", "displayName", "email", "role", "createdAt"]
+      "required": ["uid", "email", "role"]
     },
-    "products": {
+    "Product": {
       "title": "Product",
-      "description": "Product listing",
+      "description": "A product listed for sale",
       "type": "object",
       "properties": {
+        "id": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
         "price": { "type": "number" },
         "category": { "type": "string" },
-        "images": { "type": "array", "items": { "type": "string" } },
+        "images": { "type": "array" },
         "location": { "type": "string" },
         "delivery": { "type": "string" },
-        "status": { "type": "string", "enum": ["active", "sold", "draft"] },
+        "sellerContacts": { "type": "array" },
+        "status": { "type": "string", "enum": ["active", "sold", "draft", "disabled"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["title", "description", "price", "category", "status", "createdAt", "updatedAt"]
-    },
-    "orders": {
-      "title": "Order",
-      "description": "Customer order",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "productId": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "paid", "delivered", "cancelled"] },
-        "amount": { "type": "number" },
-        "paymentMethod": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "productId", "status", "amount", "paymentMethod", "createdAt"]
-    },
-    "notifications": {
-      "title": "Notification",
-      "description": "User notification",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "message": { "type": "string" },
-        "type": { "type": "string", "enum": ["order", "message", "system"] },
-        "read": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "title", "message", "type", "read", "createdAt"]
-    },
-    "reviews": {
-      "title": "Review",
-      "description": "Product review",
-      "type": "object",
-      "properties": {
-        "productId": { "type": "string" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "userPhoto": { "type": "string" },
-        "rating": { "type": "number" },
-        "comment": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["productId", "userId", "userName", "rating", "comment", "createdAt"]
-    },
-    "messages": {
-      "title": "Message",
-      "description": "Chat message",
-      "type": "object",
-      "properties": {
-        "chatId": { "type": "string" },
-        "senderId": { "type": "string" },
-        "text": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["chatId", "senderId", "text", "createdAt"]
+      "required": ["title", "price", "category", "images", "status"]
     }
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": "users",
-      "description": "User profile document"
+      "schema": "UserProfile",
+      "description": "User profile documents"
     },
     "/products/{productId}": {
-      "schema": "products",
-      "description": "Product listing document"
-    },
-    "/orders/{orderId}": {
-      "schema": "orders",
-      "description": "Order document"
-    },
-    "/notifications/{notificationId}": {
-      "schema": "notifications",
-      "description": "Notification document"
-    },
-    "/reviews/{reviewId}": {
-      "schema": "reviews",
-      "description": "Review document"
-    },
-    "/messages/{messageId}": {
-      "schema": "messages",
-      "description": "Message document"
+      "schema": "Product",
+      "description": "Product listings"
     }
   }
 }

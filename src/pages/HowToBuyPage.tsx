@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Package, Loader2 } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import Markdown from 'react-markdown';
+import { MOCK_PAGES } from '../mockData';
 
 export default function HowToBuyPage() {
   const [content, setContent] = useState('');
@@ -11,27 +10,9 @@ export default function HowToBuyPage() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const docRef = doc(db, 'pages', 'how-to-buy');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setContent(docSnap.data().content);
-        } else {
-          setContent(`
-### 1. Encontre o Produto
-Use a barra de pesquisa ou navegue pelas categorias para encontrar o que você precisa. Filtre por localização e preço para melhores resultados.
-
-### 2. Fale Conosco
-Use nosso chat integrado ou WhatsApp para tirar dúvidas, negociar o preço e combinar os detalhes da entrega.
-
-### 3. Combine a Entrega
-Clique em 'WhatsApp' ou 'Chat no App' para iniciar a conversa com nossa equipe. Combine os detalhes da entrega.
-
-### 4. Compre com Segurança
-Todos os produtos são vendidos diretamente pela MultiVendas, garantindo a sua segurança e a qualidade do produto.
-
-### 5. Receba e Avalie
-Após receber o produto, confirme a entrega e deixe sua avaliação. Sua opinião é muito importante para nós.
-          `);
+        const pageData = MOCK_PAGES.howToBuy;
+        if (pageData) {
+          setContent(pageData.content);
         }
       } catch (error) {
         console.error("Error fetching how to buy:", error);

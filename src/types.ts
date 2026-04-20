@@ -5,6 +5,7 @@ export interface UserProfile {
   photoURL: string;
   role: 'admin' | 'client';
   createdAt: string;
+  emailVerified: boolean;
 }
 
 export interface Product {
@@ -18,7 +19,7 @@ export interface Product {
   delivery: string;
   sellerPhone?: string;
   sellerContacts?: string[];
-  status: 'active' | 'sold' | 'draft';
+  status: 'active' | 'sold' | 'draft' | 'disabled';
   createdAt: string;
   updatedAt: string;
 }

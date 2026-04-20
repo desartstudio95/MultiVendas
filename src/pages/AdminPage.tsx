@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { useState, useEffect, useRef } from 'react';
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
+import { MOCK_PRODUCTS, MOCK_PAGES } from '../mockData';
+import { db, storage } from '../lib/firebase';
+import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   Plus, 
   Trash2, 
@@ -14,7 +16,7 @@ import {
   Tag, 
   MapPin,
   Sparkles,
-  Loader2,
+  Loader2, 
   X,
   CheckCircle2,
   XCircle,
@@ -22,15 +24,22 @@ import {
   Share2,
   FileText,
   Save,
-  PlusCircle
+  PlusCircle,
+  Upload,
+  RefreshCw,
+  Copy,
+  Check
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 const CATEGORIES = [
   { name: 'Carros', icon: 'Car' },
   { name: 'Moda', icon: 'Shirt' },
   { name: 'Eletrónicos', icon: 'Smartphone' },
+  { name: 'Relógios', icon: 'Watch' },
+  { name: 'Sapatos', icon: 'Footprints' },
+  { name: 'Roupa Infantil', icon: 'Baby' },
   { name: 'Imóveis', icon: 'Home' },
   { name: 'Serviços', icon: 'Wrench' },
   { name: 'Alimentos', icon: 'Apple' },
@@ -38,6 +47,11 @@ const CATEGORIES = [
   { name: 'Escritório', icon: 'Briefcase' },
   { name: 'Ração', icon: 'Dog' },
   { name: 'Bebidas', icon: 'Beer' },
+  { name: 'Cosméticos', icon: 'Sparkles' },
+  { name: 'Sabonetes', icon: 'Droplets' },
+  { name: 'Perfumes', icon: 'Flower' },
+  { name: 'Brinquedos', icon: 'Gamepad2' },
+  { name: 'Máquinas Industriais', icon: 'Factory' },
   { name: 'Outros', icon: 'Box' }
 ];
 
@@ -59,27 +73,16 @@ function PagesEditor() {
     const fetchPage = async () => {
       setLoading(true);
       try {
-        const docRef = doc(db, 'pages', activePage);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
+        const pageData = (MOCK_PAGES as any)[activePage];
+        if (pageData) {
           if (activePage === 'home') {
-            setHomeData(docSnap.data() as any);
+            setHomeData(pageData);
           } else {
-            setContent(docSnap.data().content);
-          }
-        } else {
-          if (activePage === 'home') {
-            setHomeData({
-              title: 'O que você está <br /> <span className="text-orange-500">procurando hoje?</span>',
-              subtitle: 'Tudo o que procuras, num só lugar'
-            });
-          } else {
-            setContent('');
+            setContent(pageData.content);
           }
         }
       } catch (error) {
         console.error("Error fetching page:", error);
-        toast.error("Erro ao carregar página");
       } finally {
         setLoading(false);
       }
@@ -89,19 +92,10 @@ function PagesEditor() {
 
   const handleSave = async () => {
     setSaving(true);
-    try {
-      const dataToSave = activePage === 'home' 
-        ? { ...homeData, updatedAt: new Date().toISOString() }
-        : { content, updatedAt: new Date().toISOString() };
-        
-      await setDoc(doc(db, 'pages', activePage), dataToSave, { merge: true });
-      toast.success("Página salva com sucesso!");
-    } catch (error) {
-      console.error("Error saving page:", error);
-      toast.error("Erro ao salvar página");
-    } finally {
+    setTimeout(() => {
       setSaving(false);
-    }
+      toast.success("Página salva com sucesso! (Simulado)");
+    }, 500);
   };
 
   return (
@@ -187,6 +181,9 @@ export default function AdminPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -196,7 +193,7 @@ export default function AdminPage() {
     category: 'Outros',
     location: 'Maputo',
     delivery: 'Não disponível',
-    imageUrl: '',
+    imageUrls: [] as string[],
     sellerContacts: ['+258840000000'],
   });
 
@@ -208,15 +205,30 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const productsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const querySnapshot = await getDocs(q);
+      const firestoreProducts = querySnapshot.docs.map(docSnapshot => ({
+        id: docSnapshot.id,
+        ...docSnapshot.data()
       })) as Product[];
-      setProducts(productsData);
+
+      if (firestoreProducts.length > 0) {
+        setProducts(firestoreProducts);
+      } else {
+        const localProducts = localStorage.getItem('demo_products');
+        if (localProducts) {
+          setProducts(JSON.parse(localProducts));
+        } else {
+          setProducts(MOCK_PRODUCTS as Product[]);
+        }
+      }
     } catch (error) {
-      console.error("Error fetching products:", error);
-      toast.error("Erro ao carregar produtos");
+      console.error("Fetch error:", error);
+      const localProducts = localStorage.getItem('demo_products');
+      if (localProducts) {
+        setProducts(JSON.parse(localProducts));
+      } else {
+        setProducts(MOCK_PRODUCTS as Product[]);
+      }
     } finally {
       setLoading(false);
     }
@@ -224,42 +236,35 @@ export default function AdminPage() {
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.price || !formData.imageUrl) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
-
+    setLoading(true);
+    
     try {
-      const validContacts = formData.sellerContacts.filter(c => c.trim() !== '');
+      const productData = {
+        title: formData.title,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        category: formData.category,
+        location: formData.location,
+        delivery: formData.delivery,
+        images: formData.imageUrls.length > 0 ? formData.imageUrls : ['https://picsum.photos/seed/product/800/800'],
+        sellerContacts: formData.sellerContacts,
+        status: 'active',
+        updatedAt: new Date().toISOString(),
+      };
+
       if (editingId) {
-        await updateDoc(doc(db, 'products', editingId), {
-          title: formData.title,
-          description: formData.description,
-          price: parseFloat(formData.price),
-          category: formData.category,
-          location: formData.location,
-          delivery: formData.delivery,
-          sellerContacts: validContacts,
-          images: [formData.imageUrl],
-          updatedAt: new Date().toISOString(),
-        });
-        toast.success("Produto atualizado com sucesso!");
+        await updateDoc(doc(db, 'products', editingId), productData);
+        toast.success("Produto atualizado no Firebase!");
       } else {
-        await addDoc(collection(db, 'products'), {
-          title: formData.title,
-          description: formData.description,
-          price: parseFloat(formData.price),
-          category: formData.category,
-          location: formData.location,
-          delivery: formData.delivery,
-          sellerContacts: validContacts,
-          images: [formData.imageUrl],
-          status: 'active',
+        const newDoc = {
+          ...productData,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-        toast.success("Produto publicado com sucesso!");
+        };
+        await addDoc(collection(db, 'products'), newDoc);
+        toast.success("Produto publicado no Firebase!");
       }
+
+      await fetchProducts();
       setIsAdding(false);
       setEditingId(null);
       setFormData({
@@ -269,139 +274,109 @@ export default function AdminPage() {
         category: 'Outros',
         location: 'Maputo',
         delivery: 'Não disponível',
-        imageUrl: '',
+        imageUrls: [],
         sellerContacts: ['+258840000000'],
       });
-      fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving product:", error);
-      toast.error("Erro ao salvar produto");
+      toast.error("Erro ao salvar produto: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleEditProduct = (product: Product) => {
+    setEditingId(product.id);
     setFormData({
       title: product.title,
       description: product.description,
       price: product.price.toString(),
       category: product.category,
       location: product.location,
-      delivery: product.delivery || 'Não disponível',
-      imageUrl: product.images[0] || '',
-      sellerContacts: product.sellerContacts?.length ? product.sellerContacts : (product.sellerPhone ? [product.sellerPhone] : ['+258840000000']),
+      delivery: product.delivery,
+      imageUrls: product.images || [],
+      sellerContacts: product.sellerContacts || ['+258840000000'],
     });
-    setEditingId(product.id);
     setIsAdding(true);
   };
 
   const handleDeleteProduct = async (id: string) => {
-    toast("Tem certeza que deseja excluir este produto?", {
-      action: {
-        label: "Excluir",
-        onClick: async () => {
-          try {
-            await deleteDoc(doc(db, 'products', id));
-            toast.success("Produto excluído");
-            fetchProducts();
-          } catch (error) {
-            console.error("Error deleting product:", error);
-            toast.error("Erro ao excluir produto");
-          }
-        }
-      }
-    });
+    if (!window.confirm("Tem certeza que deseja excluir este produto?")) return;
+    
+    try {
+      await deleteDoc(doc(db, 'products', id));
+      toast.success("Produto excluído do Firebase!");
+      await fetchProducts();
+    } catch (error: any) {
+      toast.error("Erro ao excluir: " + error.message);
+    }
   };
 
   const seedDatabase = async () => {
-    toast("Isso irá adicionar 27 produtos de exemplo ao banco de dados. Continuar?", {
-      action: {
-        label: "Popular",
-        onClick: async () => {
-          setIsSeeding(true);
-          const seedProducts = [
-            // Carros
-            { title: "Toyota Hilux 2022", price: 2500000, category: "Carros", location: "Maputo", description: "Excelente estado, baixa quilometragem.", imageUrl: "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&q=80&w=800" },
-            { title: "Ford Ranger 2021", price: 1800000, category: "Carros", location: "Matola", description: "4x4, diesel, manutenção em dia.", imageUrl: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=800" },
-            { title: "Nissan NP300", price: 950000, category: "Carros", location: "Beira", description: "Ideal para trabalho, motor robusto.", imageUrl: "https://images.unsplash.com/photo-1591860454448-58183f0f042f?auto=format&fit=crop&q=80&w=800" },
-            
-            // Moda
-            { title: "Ténis Nike Air Max", price: 7500, category: "Moda", location: "Maputo", description: "Original, vários tamanhos disponíveis.", imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=800" },
-            { title: "Relógio Casio G-Shock", price: 4500, category: "Moda", location: "Matola", description: "Resistente à água, original.", imageUrl: "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&q=80&w=800" },
-            { title: "Vestido de Verão", price: 1500, category: "Moda", location: "Nampula", description: "Tecido leve, várias cores.", imageUrl: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&q=80&w=800" },
-            
-            // Eletrónicos
-            { title: "iPhone 13 Pro Max", price: 85000, category: "Eletrónicos", location: "Maputo", description: "128GB, Saúde da bateria 95%.", imageUrl: "https://images.unsplash.com/photo-1632661674596-df8be070a5c5?auto=format&fit=crop&q=80&w=800" },
-            { title: "MacBook Air M1", price: 65000, category: "Eletrónicos", location: "Maputo", description: "8GB RAM, 256GB SSD, como novo.", imageUrl: "https://images.unsplash.com/photo-1611186871348-b1ec696e5237?auto=format&fit=crop&q=80&w=800" },
-            { title: "Smart TV Samsung 55\"", price: 42000, category: "Eletrónicos", location: "Matola", description: "4K UHD, Smart Hub.", imageUrl: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&q=80&w=800" },
-            
-            // Imóveis
-            { title: "Apartamento T3 Polana", price: 12000000, category: "Imóveis", location: "Maputo", description: "Vista ao mar, segurança 24h.", imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800" },
-            { title: "Vivenda T4 Sommerschield", price: 25000000, category: "Imóveis", location: "Maputo", description: "Com piscina e jardim amplo.", imageUrl: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=800" },
-            { title: "Terreno 20x40 Matola", price: 850000, category: "Imóveis", location: "Matola", description: "Documentação em dia, vedado.", imageUrl: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=800" },
-            
-            // Serviços
-            { title: "Manutenção de AC", price: 1500, category: "Serviços", location: "Maputo", description: "Limpeza e carregamento de gás.", imageUrl: "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&q=80&w=800" },
-            { title: "Pintura Residencial", price: 5000, category: "Serviços", location: "Matola", description: "Mão de obra qualificada.", imageUrl: "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=800" },
-            { title: "Consultoria de TI", price: 2500, category: "Serviços", location: "Maputo", description: "Suporte e redes.", imageUrl: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=800" },
-            
-            // Alimentos
-            { title: "Cesto de Frutas Tropicais", price: 1200, category: "Alimentos", location: "Maputo", description: "Frutas frescas da época.", imageUrl: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&q=80&w=800" },
-            { title: "Saco de Arroz 25kg", price: 1450, category: "Alimentos", location: "Matola", description: "Arroz de primeira qualidade.", imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=800" },
-            { title: "Óleo de Cozinha 5L", price: 650, category: "Alimentos", location: "Beira", description: "Óleo vegetal puro.", imageUrl: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&q=80&w=800" },
-            
-            // Construção
-            { title: "Cimento Portland 50kg", price: 650, category: "Construção", location: "Matola", description: "Alta resistência.", imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=800" },
-            { title: "Barra de Ferro 12mm", price: 450, category: "Construção", location: "Maputo", description: "Ferro de construção civil.", imageUrl: "https://images.unsplash.com/photo-1533035353720-f1c6a75cd8ab?auto=format&fit=crop&q=80&w=800" },
-            { title: "Areia de Construção (m3)", price: 1200, category: "Construção", location: "Matola", description: "Areia lavada.", imageUrl: "https://images.unsplash.com/photo-1530124560677-bdaea024f061?auto=format&fit=crop&q=80&w=800" },
-            
-            // Escritório
-            { title: "Cadeira Ergonómica", price: 12500, category: "Escritório", location: "Maputo", description: "Ideal para home office.", imageUrl: "https://images.unsplash.com/photo-1505797149-43b007664973?auto=format&fit=crop&q=80&w=800" },
-            { title: "Secretária de Madeira", price: 8500, category: "Escritório", location: "Matola", description: "Design moderno, 120x60cm.", imageUrl: "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&q=80&w=800" },
-            { title: "Impressora HP Laserjet", price: 14000, category: "Escritório", location: "Maputo", description: "Impressão rápida, Wi-Fi.", imageUrl: "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?auto=format&fit=crop&q=80&w=800" },
-            
-            // Outros
-            { title: "Bicicleta de Montanha", price: 12000, category: "Outros", location: "Maputo", description: "21 velocidades, suspensão frontal.", imageUrl: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800" },
-            { title: "Guitarra Acústica", price: 6500, category: "Outros", location: "Matola", description: "Cordas de aço, excelente som.", imageUrl: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&q=80&w=800" },
-            { title: "Kit de Ferramentas 100pcs", price: 3500, category: "Outros", location: "Beira", description: "Completo para casa.", imageUrl: "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&q=80&w=800" }
-          ];
-      
-          try {
-            for (const p of seedProducts) {
-              await addDoc(collection(db, 'products'), {
-                ...p,
-                delivery: 'Disponível',
-                images: [p.imageUrl],
-                status: 'active',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              });
-            }
-            toast.success("Banco de dados populado com sucesso!");
-            fetchProducts();
-          } catch (error) {
-            console.error("Error seeding database:", error);
-            toast.error("Erro ao popular banco de dados");
-          } finally {
-            setIsSeeding(false);
-          }
-        }
+    if (!window.confirm("Isso irá enviar todos os produtos mockados para o Firebase. Continuar?")) return;
+    setIsSeeding(true);
+    try {
+      for (const product of MOCK_PRODUCTS) {
+        const { id, ...data } = product;
+        await addDoc(collection(db, 'products'), {
+          ...data,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
       }
-    });
+      toast.success("Firebase populado com sucesso!");
+      await fetchProducts();
+    } catch (error: any) {
+      toast.error("Erro ao popular: " + error.message);
+    } finally {
+      setIsSeeding(false);
+    }
   };
 
   const handleMarkAsSold = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'sold' ? 'active' : 'sold';
     try {
-      const newStatus = currentStatus === 'sold' ? 'active' : 'sold';
-      await updateDoc(doc(db, 'products', id), {
-        status: newStatus,
-        updatedAt: new Date().toISOString()
-      });
-      toast.success(newStatus === 'sold' ? "Produto marcado como vendido" : "Produto marcado como ativo");
-      fetchProducts();
-    } catch (error) {
-      console.error("Error updating product status:", error);
-      toast.error("Erro ao atualizar status do produto");
+      await updateDoc(doc(db, 'products', id), { status: newStatus });
+      toast.success(`Status alterado para ${newStatus === 'sold' ? 'Vendido' : 'Ativo'}`);
+      await fetchProducts();
+    } catch (error: any) {
+      toast.error("Erro ao alterar status: " + error.message);
     }
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'disabled' ? 'active' : 'disabled';
+    try {
+      await updateDoc(doc(db, 'products', id), { status: newStatus });
+      toast.success(`Produto ${newStatus === 'disabled' ? 'desativado' : 'ativado'}`);
+      await fetchProducts();
+    } catch (error: any) {
+      toast.error("Erro ao alterar status: " + error.message);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setFormData(prev => ({ ...prev, imageUrls: [...prev.imageUrls, url] }));
+      toast.success('Imagem carregada no Storage!');
+    } catch (error: any) {
+      toast.error("Erro no upload: " + error.message);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = formData.imageUrls.filter((_, i) => i !== index);
+    setFormData({ ...formData, imageUrls: newImages });
   };
 
   return (
@@ -412,8 +387,11 @@ export default function AdminPage() {
             <LayoutDashboard className="w-6 h-6 text-green-600" />
             Painel Administrativo
           </h1>
-          <p className="text-sm text-gray-500">Gerencie os produtos, serviços e páginas do MultiVendas</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-gray-500">Gerencie os produtos, serviços e páginas do MultiVendas</p>
+          </div>
         </div>
+
         {activeTab === 'products' && (
           <div className="flex flex-wrap gap-2">
             <button 
@@ -556,13 +534,26 @@ export default function AdminPage() {
                     <td className="px-6 py-4">
                       <span className={cn(
                         "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                        product.status === 'active' ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600"
+                        product.status === 'active' ? "bg-green-100 text-green-600" : 
+                        product.status === 'sold' ? "bg-yellow-100 text-yellow-600" :
+                        "bg-gray-100 text-gray-500"
                       )}>
-                        {product.status === 'active' ? 'Ativo' : 'Vendido'}
+                        {product.status === 'active' ? 'Ativo' : 
+                         product.status === 'sold' ? 'Vendido' : 'Desativado'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleToggleStatus(product.id, product.status)}
+                          className={cn(
+                            "p-2 transition-colors",
+                            product.status === 'disabled' ? "text-orange-600 hover:text-orange-700" : "text-gray-400 hover:text-orange-600"
+                          )}
+                          title={product.status === 'disabled' ? "Ativar Produto" : "Desativar Produto"}
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
                         <button 
                           onClick={() => {
                             const url = `${window.location.origin}/product/${product.id}`;
@@ -642,7 +633,7 @@ export default function AdminPage() {
                       category: 'Outros',
                       location: 'Maputo',
                       delivery: 'Não disponível',
-                      imageUrl: '',
+                      imageUrls: [],
                       sellerContacts: ['+258840000000'],
                     });
                   }} 
@@ -755,37 +746,67 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Imagem do Produto</label>
-                      <div className="relative group aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center">
-                        {formData.imageUrl ? (
-                          <>
-                            <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Imagens do Produto</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                          <AnimatePresence>
+                            {formData.imageUrls.map((url, index) => (
+                              <motion.div 
+                                key={url}
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 group"
+                              >
+                                <img src={url} alt={`Produto ${index + 1}`} className="w-full h-full object-cover" />
+                                <button 
+                                  type="button"
+                                  onClick={() => removeImage(index)}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                                {index === 0 && (
+                                  <div className="absolute bottom-0 left-0 right-0 bg-green-600/90 text-white text-[8px] font-bold py-1 text-center uppercase tracking-widest">
+                                    Principal
+                                  </div>
+                                )}
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                          
+                          {formData.imageUrls.length < 10 && (
                             <button 
                               type="button"
-                              onClick={() => setFormData({...formData, imageUrl: ''})}
-                              className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => !isUploading && fileInputRef.current?.click()}
+                              disabled={isUploading}
+                              className={cn(
+                                "aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 hover:border-green-400 hover:bg-green-50/30 transition-all group disabled:opacity-50",
+                                isUploading && "cursor-not-allowed"
+                              )}
                             >
-                              <X className="w-4 h-4" />
+                              {isUploading ? (
+                                <Loader2 className="w-6 h-6 text-green-600 animate-spin" />
+                              ) : (
+                                <>
+                                  <Upload className="w-6 h-6 text-gray-300 group-hover:text-green-500" />
+                                  <span className="text-[8px] font-bold text-gray-400 uppercase group-hover:text-green-600">Adicionar</span>
+                                </>
+                              )}
                             </button>
-                          </>
-                        ) : (
-                          <div className="text-center p-4">
-                            <ImageIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                            <p className="text-[10px] text-gray-400 font-bold uppercase">Nenhuma imagem selecionada</p>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                        <input 
+                          type="file"
+                          ref={fileInputRef}
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                        />
+                        <p className="text-[8px] text-gray-400 mt-2 uppercase tracking-widest text-center">Arraste para reordenar (Em breve) | Máximo 10 imagens</p>
                       </div>
-                      <input 
-                        type="url" 
-                        placeholder="Cole a URL da imagem aqui..."
-                        className="w-full px-4 py-2 mt-2 bg-gray-50 border-none rounded-xl text-xs"
-                        value={formData.imageUrl}
-                        onChange={e => setFormData({...formData, imageUrl: e.target.value})}
-                      />
                     </div>
-                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -813,7 +834,7 @@ export default function AdminPage() {
                         category: 'Outros',
                         location: 'Maputo',
                         delivery: 'Não disponível',
-                        imageUrl: '',
+                        imageUrls: [],
                         sellerContacts: ['+258840000000'],
                       });
                     }}

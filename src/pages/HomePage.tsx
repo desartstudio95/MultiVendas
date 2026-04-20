@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Product, Category } from '../types';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import { MapPin, ChevronRight, Package, Box } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import ProductCard from '../components/ProductCard';
+import { MOCK_PRODUCTS, MOCK_PAGES } from '../mockData';
+import { db } from '../lib/firebase';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 
 import { 
   Car, 
@@ -19,12 +21,23 @@ import {
   Briefcase, 
   Dog,
   Beer,
+  Sparkles,
+  Droplets,
+  Flower,
+  Gamepad2,
+  Factory,
+  Watch,
+  Footprints,
+  Baby,
 } from 'lucide-react';
 
 export const CATEGORY_ICONS: Record<string, any> = {
   'Carros': Car,
   'Moda': Shirt,
   'Eletrónicos': Smartphone,
+  'Relógios': Watch,
+  'Sapatos': Footprints,
+  'Roupa Infantil': Baby,
   'Imóveis': HomeIcon,
   'Serviços': Wrench,
   'Alimentos': Apple,
@@ -32,6 +45,11 @@ export const CATEGORY_ICONS: Record<string, any> = {
   'Escritório': Briefcase,
   'Ração': Dog,
   'Bebidas': Beer,
+  'Cosméticos': Sparkles,
+  'Sabonetes': Droplets,
+  'Perfumes': Flower,
+  'Brinquedos': Gamepad2,
+  'Máquinas Industriais': Factory,
   'Outros': Box,
 };
 
@@ -39,6 +57,9 @@ const CATEGORIES: Category[] = [
   { id: '1', name: 'Carros', icon: 'Car' },
   { id: '2', name: 'Moda', icon: 'Shirt' },
   { id: '3', name: 'Eletrónicos', icon: 'Smartphone' },
+  { id: '17', name: 'Relógios', icon: 'Watch' },
+  { id: '18', name: 'Sapatos', icon: 'Footprints' },
+  { id: '19', name: 'Roupa Infantil', icon: 'Baby' },
   { id: '4', name: 'Imóveis', icon: 'Home' },
   { id: '5', name: 'Serviços', icon: 'Wrench' },
   { id: '6', name: 'Alimentos', icon: 'Apple' },
@@ -46,6 +67,11 @@ const CATEGORIES: Category[] = [
   { id: '8', name: 'Escritório', icon: 'Briefcase' },
   { id: '10', name: 'Ração', icon: 'Dog' },
   { id: '11', name: 'Bebidas', icon: 'Beer' },
+  { id: '12', name: 'Cosméticos', icon: 'Sparkles' },
+  { id: '13', name: 'Sabonetes', icon: 'Droplets' },
+  { id: '14', name: 'Perfumes', icon: 'Flower' },
+  { id: '15', name: 'Brinquedos', icon: 'Gamepad2' },
+  { id: '16', name: 'Máquinas Industriais', icon: 'Factory' },
   { id: '9', name: 'Outros', icon: 'Box' },
 ];
 
@@ -58,43 +84,50 @@ export default function HomePage() {
   });
 
   useEffect(() => {
-    const fetchHomeData = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const docRef = doc(db, 'pages', 'home');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setHomeData(docSnap.data() as any);
-        }
-      } catch (error) {
-        console.error("Error fetching home data:", error);
-      }
-    };
-    fetchHomeData();
+        // Fetch home page content
+        setHomeData(MOCK_PAGES.home as any);
 
-    const q = query(
-      collection(db, 'products'),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const productsData = snapshot.docs
-        .map(doc => ({
+        const q = query(
+          collection(db, 'products'), 
+          where('status', '==', 'active'),
+          limit(50) // Fetch a bit more to sort locally
+        );
+        const querySnapshot = await getDocs(q);
+        let firestoreProducts = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        }))
-        .slice(0, 20) as Product[];
-      setProducts(productsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching products:", error);
-      setLoading(false);
-      if (error.message.includes('permission') || error.message.includes('insufficient')) {
-        handleFirestoreError(error, OperationType.LIST, 'products');
-      }
-    });
+        })) as Product[];
 
-    return () => unsubscribe();
+        // Sort client-side to avoid index requirement for now
+        firestoreProducts.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        // Limit to 8 after sorting
+        firestoreProducts = firestoreProducts.slice(0, 8);
+
+        if (firestoreProducts.length > 0) {
+          setProducts(firestoreProducts);
+        } else {
+          setProducts(MOCK_PRODUCTS.filter(p => p.status === 'active') as Product[]);
+        }
+      } catch (error: any) {
+        if (error?.message?.includes('permissions')) {
+          toast.error("Erro de Permissão no Firebase", {
+            description: "Verifique se você copiou as regras de segurança corretamente no Console do Firebase (veja security_spec.md)."
+          });
+        }
+        console.error("Fetch error:", error);
+        setProducts(MOCK_PRODUCTS.filter(p => p.status === 'active') as Product[]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   return (

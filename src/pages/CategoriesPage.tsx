@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '../firebase';
 import { Product, Category } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
+import { MOCK_PRODUCTS } from '../mockData';
+import { toast } from 'sonner';
+import { db } from '../lib/firebase';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { 
   LayoutGrid, 
   Search, 
@@ -14,7 +16,8 @@ import {
   Package,
   ArrowUpDown
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import ProductCard from '../components/ProductCard';
 
 import { 
   Car, 
@@ -27,7 +30,15 @@ import {
   Briefcase, 
   Box,
   Dog,
-  Beer
+  Beer,
+  Sparkles,
+  Droplets,
+  Flower,
+  Gamepad2,
+  Factory,
+  Watch,
+  Footprints,
+  Baby
 } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -41,6 +52,14 @@ const CATEGORY_ICONS: Record<string, any> = {
   'Escritório': Briefcase,
   'Ração': Dog,
   'Bebidas': Beer,
+  'Cosméticos': Sparkles,
+  'Sabonetes': Droplets,
+  'Perfumes': Flower,
+  'Brinquedos': Gamepad2,
+  'Máquinas Industriais': Factory,
+  'Relógios': Watch,
+  'Sapatos': Footprints,
+  'Roupa Infantil': Baby,
   'Outros': Box,
 };
 
@@ -48,6 +67,9 @@ const CATEGORIES: Category[] = [
   { id: '1', name: 'Carros', icon: 'Car' },
   { id: '2', name: 'Moda', icon: 'Shirt' },
   { id: '3', name: 'Eletrónicos', icon: 'Smartphone' },
+  { id: '17', name: 'Relógios', icon: 'Watch' },
+  { id: '18', name: 'Sapatos', icon: 'Footprints' },
+  { id: '19', name: 'Roupa Infantil', icon: 'Baby' },
   { id: '4', name: 'Imóveis', icon: 'Home' },
   { id: '5', name: 'Serviços', icon: 'Wrench' },
   { id: '6', name: 'Alimentos', icon: 'Apple' },
@@ -55,6 +77,11 @@ const CATEGORIES: Category[] = [
   { id: '8', name: 'Escritório', icon: 'Briefcase' },
   { id: '10', name: 'Ração', icon: 'Dog' },
   { id: '11', name: 'Bebidas', icon: 'Beer' },
+  { id: '12', name: 'Cosméticos', icon: 'Sparkles' },
+  { id: '13', name: 'Sabonetes', icon: 'Droplets' },
+  { id: '14', name: 'Perfumes', icon: 'Flower' },
+  { id: '15', name: 'Brinquedos', icon: 'Gamepad2' },
+  { id: '16', name: 'Máquinas Industriais', icon: 'Factory' },
   { id: '9', name: 'Outros', icon: 'Box' },
 ];
 
@@ -73,30 +100,48 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-    setLoading(true);
-    // We fetch products for the category and filter status client-side to avoid requiring composite indexes
-    let q = query(collection(db, 'products'));
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        let q = query(collection(db, 'products'), where('status', '!=', 'disabled'));
+        
+        if (activeCategory !== 'Todos') {
+          q = query(q, where('category', '==', activeCategory));
+        }
 
-    if (activeCategory !== 'Todos') {
-      q = query(
-        collection(db, 'products'),
-        where('category', '==', activeCategory)
-      );
-    }
+        const querySnapshot = await getDocs(q);
+        const firestoreProducts = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Product[];
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const productsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Product[];
-      setProducts(productsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching products:", error);
-      setLoading(false);
-    });
+        if (firestoreProducts.length > 0) {
+          setProducts(firestoreProducts);
+        } else {
+          let filtered = MOCK_PRODUCTS.filter(p => p.status !== 'disabled') as Product[];
+          if (activeCategory !== 'Todos') {
+            filtered = filtered.filter(p => p.category === activeCategory);
+          }
+          setProducts(filtered);
+        }
+      } catch (error: any) {
+        if (error?.message?.includes('permissions')) {
+          toast.error("Erro de Permissão no Firebase", {
+            description: "Verifique se as regras de segurança estão corretas no Console."
+          });
+        }
+        console.error("Fetch error:", error);
+        let filtered = MOCK_PRODUCTS.filter(p => p.status !== 'disabled') as Product[];
+        if (activeCategory !== 'Todos') {
+          filtered = filtered.filter(p => p.category === activeCategory);
+        }
+        setProducts(filtered);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchData();
   }, [activeCategory]);
 
   useEffect(() => {
@@ -261,44 +306,9 @@ export default function CategoriesPage() {
             </div>
           ) : paginatedProducts.length > 0 ? (
             <div className="space-y-8">
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                 {paginatedProducts.map((product) => (
-                  <motion.div
-                    key={product.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 group hover:border-green-200 transition-all"
-                  >
-                    <Link to={`/product/${product.id}`}>
-                      <div className="aspect-square relative overflow-hidden">
-                        <img 
-                          src={product.images[0]} 
-                          alt={product.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1">
-                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                          <span className="text-[10px] font-bold">4.8</span>
-                        </div>
-                        {product.status === 'sold' && (
-                          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-[2px] flex items-center justify-center">
-                            <span className="px-4 py-2 bg-white text-gray-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl">
-                              Vendido
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-1">{product.category}</p>
-                        <h3 className="text-sm font-bold text-gray-900 line-clamp-1 mb-2">{product.title}</h3>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-black text-gray-900">{formatCurrency(product.price)}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 

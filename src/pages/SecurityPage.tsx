@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShieldCheck, Loader2 } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import Markdown from 'react-markdown';
+import { MOCK_PAGES } from '../mockData';
 
 export default function SecurityPage() {
   const [content, setContent] = useState('');
@@ -11,30 +10,9 @@ export default function SecurityPage() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const docRef = doc(db, 'pages', 'security');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setContent(docSnap.data().content);
-        } else {
-          setContent(`
-### Comunicação Segura
-Todas as conversas com a nossa equipe são protegidas. Use nosso chat interno para garantir que sua negociação seja registrada com segurança.
-
-### Privacidade de Dados
-Sua privacidade é nossa prioridade. Não compartilhamos suas informações pessoais com terceiros sem o seu consentimento explícito.
-
-### Venda Direta MultiVendas
-Todos os produtos são vendidos e garantidos diretamente pela MultiVendas, assegurando a qualidade e procedência de cada item.
-
-### Suporte ao Cliente
-Nossa equipe de suporte está sempre disponível para ajudar em caso de dúvidas ou problemas durante suas negociações.
-
-## Dicas de Segurança
-- Sempre use o chat interno do MultiVendas ou nosso WhatsApp oficial para se comunicar com nossa equipe.
-- Desconfie de ofertas enviadas por terceiros se passando pela MultiVendas.
-- A entrega é feita diretamente por nossos entregadores parceiros.
-- Verifique o produto cuidadosamente no ato da entrega antes de confirmar o recebimento.
-          `);
+        const pageData = MOCK_PAGES.security;
+        if (pageData) {
+          setContent(pageData.content);
         }
       } catch (error) {
         console.error("Error fetching security:", error);

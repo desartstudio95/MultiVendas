@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db, auth, logout, verifyEmail, deleteUser, OperationType, handleFirestoreError } from '../firebase';
 import { Order, UserProfile, Product, Notification } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { 
@@ -21,11 +19,15 @@ import {
   PlusCircle,
   Trash2,
   Mail,
-  RefreshCw
+  RefreshCw,
+  Camera
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { auth, db } from '../lib/firebase';
+import { uploadProfilePhoto, deleteFolder } from '../lib/storage';
+import { updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { deleteUser, updateProfile } from 'firebase/auth';
 
 export default function ProfilePage({ userProfile }: { userProfile: UserProfile | null }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -38,187 +40,121 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
   // Edit form state
   const [editDisplayName, setEditDisplayName] = useState(userProfile?.displayName || '');
   const [editPhotoURL, setEditPhotoURL] = useState(userProfile?.photoURL || '');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  const isEmailVerified = auth.currentUser?.emailVerified;
+  const isEmailVerified = userProfile?.emailVerified || false;
 
   useEffect(() => {
     if (userProfile) {
       setEditDisplayName(userProfile.displayName);
       setEditPhotoURL(userProfile.photoURL);
+      
+      // Simulate fetching notifications
+      setNotifications([
+        { id: 'n1', userId: userProfile.uid, title: 'Bem-vindo!', message: 'Obrigado por se juntar ao MultiVendas.', type: 'system', read: false, createdAt: new Date().toISOString() }
+      ]);
+      setLoading(false);
     }
   }, [userProfile]);
 
   const handleResendVerification = async () => {
     setIsResending(true);
-    try {
-      await verifyEmail(auth.currentUser);
-      toast.success('E-mail enviado!', {
-        description: 'Verifique sua caixa de entrada para o link de confirmação.'
-      });
-    } catch (error: any) {
-      console.error("Error resending verification:", error);
-      const errorMessage = typeof error === 'string' ? error : (error.message || 'Tente novamente em alguns instantes.');
-      toast.error('Falha ao enviar e-mail', {
-        description: errorMessage
-      });
-    } finally {
+    setTimeout(() => {
+      toast.success('E-mail de verificação reenviado (Demo)!');
       setIsResending(false);
-    }
+    }, 1000);
   };
 
-  useEffect(() => {
-    if (userProfile) {
-      // Notifications listener
-      const notificationUserIds = [userProfile.uid];
-      if (userProfile.role === 'admin' || userProfile.email === 'isacruimugabe@gmail.com') {
-        notificationUserIds.push('admin');
-      }
-
-      const notificationsQ = query(
-        collection(db, 'notifications'),
-        where('userId', 'in', notificationUserIds)
-      );
-
-      const unsubscribeNotifications = onSnapshot(notificationsQ, (snapshot) => {
-        const notificationsData = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }))
-          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) as Notification[];
-        setNotifications(notificationsData);
-        setLoading(false);
-      }, (error) => {
-        console.error("Error fetching notifications:", error);
-        setLoading(false);
-      });
-
-      return () => {
-        unsubscribeNotifications();
-      };
-    }
-  }, [userProfile]);
-
-  if (!userProfile) return null;
-
   const markNotificationAsRead = async (id: string) => {
-    try {
-      await updateDoc(doc(db, 'notifications', id), { read: true });
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
   const deleteNotification = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'notifications', id));
-    } catch (error) {
-      console.error("Error deleting notification:", error);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'text-green-600 bg-green-50';
-      case 'pending': return 'text-yellow-600 bg-yellow-50';
-      case 'delivered': return 'text-blue-600 bg-blue-50';
-      case 'cancelled': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid': return <CheckCircle2 className="w-4 h-4" />;
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'delivered': return <Package className="w-4 h-4" />;
-      case 'cancelled': return <XCircle className="w-4 h-4" />;
-      default: return <AlertCircle className="w-4 h-4" />;
-    }
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userProfile) return;
-    
+
     setIsUpdating(true);
     try {
-      const userDocRef = doc(db, 'users', userProfile.uid);
-      await updateDoc(userDocRef, {
+      let finalPhotoURL = editPhotoURL;
+
+      // Upload if a new file was selected
+      if (photoFile) {
+        finalPhotoURL = await uploadProfilePhoto(userProfile.uid, photoFile);
+      }
+
+      // Update Firestore
+      await updateDoc(doc(db, 'users', userProfile.uid), {
         displayName: editDisplayName,
-        photoURL: editPhotoURL
+        photoURL: finalPhotoURL
       });
+
+      // Update Firebase Auth Profile
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, {
+          displayName: editDisplayName,
+          photoURL: finalPhotoURL
+        });
+      }
+
       toast.success('Perfil atualizado com sucesso!');
+      setPhotoFile(null);
+      setPhotoPreview(null);
       setActiveTab('notifications');
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      handleFirestoreError(error, OperationType.UPDATE, `users/${userProfile.uid}`);
-      toast.error('Erro ao atualizar perfil');
+    } catch (error: any) {
+      console.error("Profile update error", error);
+      toast.error(error.message || 'Erro ao atualizar perfil');
     } finally {
       setIsUpdating(false);
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (!userProfile || !auth.currentUser) return;
+    if (!userProfile) return;
     
-    const confirmDelete = window.confirm('TEM CERTEZA? Esta ação é irreversível e todos os seus dados serão excluídos permanentemente.');
-    if (!confirmDelete) return;
+    const confirmed = window.confirm('TEM CERTEZA? Esta ação é irreversível e excluirá todos os seus dados.');
+    if (!confirmed) return;
 
     setIsDeleting(true);
     try {
-      // 1. Delete Firestore document
-      const userDocRef = doc(db, 'users', userProfile.uid);
-      await deleteDoc(userDocRef);
-      
-      // 2. Delete Auth user
-      await deleteUser(auth.currentUser);
-      
-      toast.success('Sua conta foi excluída com sucesso.');
-      logout();
+      // 1. Delete folders from storage (requested and legacy)
+      await deleteFolder(`user_uploads/${userProfile.uid}`);
+      await deleteFolder(`profiles/${userProfile.uid}`);
+
+      // 2. Delete from Firestore
+      await deleteDoc(doc(db, 'users', userProfile.uid));
+
+      // 3. Delete from Firebase Auth
+      const user = auth.currentUser;
+      if (user) {
+        await deleteUser(user);
+      }
+
+      toast.success('Conta excluída com sucesso.');
+      window.location.href = '/';
     } catch (error: any) {
-      console.error("Error deleting account:", error);
+      console.error("Account deletion error", error);
       if (error.code === 'auth/requires-recent-login') {
-        toast.error('Ação sensível', {
-          description: 'Por favor, saia e entre novamente para confirmar sua identidade antes de excluir a conta.'
-        });
+        toast.error('Para excluir sua conta, você precisa ter feito login recentemente. Por favor, saia e entre novamente.');
       } else {
-        toast.error('Erro ao excluir conta');
+        toast.error(error.message || 'Erro ao excluir conta');
       }
     } finally {
       setIsDeleting(false);
     }
   };
 
+  const logout = async () => {
+    toast.success('Sessão encerrada (Demo)');
+    window.location.href = '/';
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Email Verification Warning - Only for users with email */}
-      {auth.currentUser?.email && !isEmailVerified && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-orange-50 border border-orange-200 p-6 rounded-[32px] flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600">
-              <Mail className="w-6 h-6" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-orange-900 font-bold">Verifique seu e-mail</p>
-              <p className="text-sm text-orange-700">Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada para desbloquear todos os recursos.</p>
-            </div>
-          </div>
-          <button 
-            onClick={handleResendVerification}
-            disabled={isResending}
-            className="px-6 py-3 bg-orange-600 text-white rounded-2xl text-sm font-bold hover:bg-orange-700 transition-all flex items-center gap-2 disabled:opacity-50"
-          >
-            {isResending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-            Reenviar Link
-          </button>
-        </motion.div>
-      )}
-
       {/* Profile Header */}
       <section className="relative bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
         {/* Background Accent */}
@@ -447,6 +383,39 @@ export default function ProfilePage({ userProfile }: { userProfile: UserProfile 
                   </div>
 
                   <form onSubmit={handleUpdateProfile} className="space-y-6">
+                    {/* Photo Upload Section - Restricted to Admin */}
+                    {userProfile?.role === 'admin' && (
+                      <div className="flex flex-col items-center justify-center space-y-4">
+                        <div className="relative group">
+                          <div className="w-24 h-24 rounded-full bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group-hover:border-green-500 transition-all">
+                            {(photoPreview || editPhotoURL) ? (
+                              <img src={photoPreview || editPhotoURL} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                              <Camera className="w-8 h-8 text-gray-300 group-hover:text-green-500" />
+                            )}
+                          </div>
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setPhotoFile(file);
+                                const reader = new FileReader();
+                                reader.onloadend = () => setPhotoPreview(reader.result as string);
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white border-4 border-white shadow-lg pointer-events-none">
+                            <Camera className="w-4 h-4" />
+                          </div>
+                        </div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Alterar Foto de Perfil</p>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-4">Nome de Exibição</label>
                       <input 

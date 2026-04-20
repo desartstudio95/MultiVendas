@@ -5,18 +5,6 @@
 
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged, User, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { 
-  auth, 
-  db, 
-  logout, 
-  verifyEmail, 
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile,
-  sendPasswordResetEmail
-} from './firebase';
 import { UserProfile } from './types';
 import { Toaster, toast } from 'sonner';
 import { 
@@ -40,9 +28,10 @@ import {
   EyeOff,
   Menu,
   X,
-  Heart
+  Heart,
+  Camera
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from './lib/utils';
 
 // Pages
@@ -56,18 +45,37 @@ import TermsOfUsePage from './pages/TermsOfUsePage';
 import HowToBuyPage from './pages/HowToBuyPage';
 import SecurityPage from './pages/SecurityPage';
 
-// Components
-import NotificationListener from './components/NotificationListener';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import ScrollToTop from './components/ScrollToTop';
+import { auth, db } from './lib/firebase';
+import { uploadProfilePhoto } from './lib/storage';
+import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-function Layout({ children, userProfile, user }: { children: React.ReactNode, userProfile: UserProfile | null, user: User | null }) {
+function Layout({ children, userProfile, user, setUser, setUserProfile }: { 
+  children: React.ReactNode, 
+  userProfile: UserProfile | null, 
+  user: any | null,
+  setUser: (val: any) => void,
+  setUserProfile: (val: any) => void
+}) {
   const location = useLocation();
   const navigate = useNavigate();
-  const isAdmin = userProfile?.role === 'admin' || user?.email === 'isacruimugabe@gmail.com';
+  const isAdmin = userProfile?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState('');
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setUserProfile(null);
+      toast.success('Sessão encerrada com sucesso');
+      navigate('/');
+    } catch (error) {
+      console.error("Logout error", error);
+      toast.error("Erro ao encerrar sessão");
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,18 +380,51 @@ function Layout({ children, userProfile, user }: { children: React.ReactNode, us
   );
 }
 
-function AuthRequiredView() {
+function AuthRequiredView({ setUserProfile, setUser }: { setUserProfile: (profile: UserProfile | null) => void, setUser: (user: any) => void }) {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot-password'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [verificationSentTo, setVerificationSentTo] = useState<string | null>(null);
   const [resetEmailSentTo, setResetEmailSentTo] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showRepeatPassword, setShowRepeatPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+
+  const handleGoogleSignIn = async () => {
+    setIsSigningIn(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Check if profile exists
+      const profileDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!profileDoc.exists()) {
+        const newProfile: UserProfile = {
+          uid: user.uid,
+          displayName: user.displayName || 'Usuário',
+          email: user.email || '',
+          photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
+          role: user.email === 'isacruimugabe@gmail.com' ? 'admin' : 'client',
+          createdAt: new Date().toISOString(),
+          emailVerified: user.emailVerified
+        };
+        await setDoc(doc(db, 'users', user.uid), newProfile);
+        setUserProfile(newProfile);
+      }
+      toast.success('Entrou com Google!');
+    } catch (error: any) {
+      console.error("Google login error", error);
+      toast.error(error.message || 'Erro ao entrar com Google');
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,51 +443,107 @@ function AuthRequiredView() {
     setIsSigningIn(true);
 
     try {
-      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-
       if (authMode === 'register') {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName });
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        const user = result.user;
+
+        // Send verification email
+        await sendEmailVerification(user);
         
-        // Send verification and sign out
-        await verifyEmail(userCredential.user);
-        await logout();
+        let finalPhotoURL = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
+        
+        // Upload photo to storage if exists
+        if (photoFile) {
+          try {
+            finalPhotoURL = await uploadProfilePhoto(user.uid, photoFile);
+          } catch (storageError) {
+            console.error("Storage upload error", storageError);
+            toast.error("Erro ao subir foto, usando avatar padrão.");
+          }
+        }
+        
+        // Save user info to Firestore as requested
+        const newProfile: UserProfile = {
+          uid: user.uid,
+          displayName: displayName || 'Usuário',
+          email: user.email || '',
+          photoURL: finalPhotoURL,
+          role: email === 'isacruimugabe@gmail.com' ? 'admin' : 'client',
+          createdAt: new Date().toISOString(),
+          emailVerified: false
+        };
+        await setDoc(doc(db, 'users', user.uid), newProfile);
+        
+        // Sign out to prevent automatic login before verification
+        await signOut(auth);
         
         setVerificationSentTo(email);
-        toast.success('E-mail de verificação enviado!');
+        toast.success('Link de verificação enviado!');
       } else {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        
-        if (!userCredential.user.emailVerified) {
-          await verifyEmail(userCredential.user);
-          await logout();
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        const user = result.user;
+
+        if (!user.emailVerified) {
+          // Check if profile exists and add if missing even if not verified yet
+          const profileDoc = await getDoc(doc(db, 'users', user.uid));
+          if (!profileDoc.exists()) {
+            const newProfile: UserProfile = {
+              uid: user.uid,
+              displayName: user.displayName || 'Usuário',
+              email: user.email || '',
+              photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
+              role: user.email === 'isacruimugabe@gmail.com' ? 'admin' : 'client',
+              createdAt: new Date().toISOString(),
+              emailVerified: false
+            };
+            await setDoc(doc(db, 'users', user.uid), newProfile);
+          }
+
+          // If login is successful but email is not verified
+          await sendEmailVerification(user);
+          await signOut(auth);
           setVerificationSentTo(email);
-          toast.info('E-mail não verificado', {
-            description: 'Enviamos um novo link de verificação.'
-          });
+          toast.warning('E-mail não verificado. Enviamos um novo link.');
           return;
+        }
+
+        // Check and sync profile for verified user
+        const profileDoc = await getDoc(doc(db, 'users', user.uid));
+        if (!profileDoc.exists()) {
+          const newProfile: UserProfile = {
+            uid: user.uid,
+            displayName: user.displayName || 'Usuário',
+            email: user.email || '',
+            photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
+            role: user.email === 'isacruimugabe@gmail.com' ? 'admin' : 'client',
+            createdAt: new Date().toISOString(),
+            emailVerified: true
+          };
+          await setDoc(doc(db, 'users', user.uid), newProfile);
+          setUserProfile(newProfile);
         }
         
         toast.success('Bem-vindo de volta!');
       }
     } catch (error: any) {
-      console.error("Auth error:", error);
-      let message = 'Erro ao realizar autenticação';
+      console.error("Auth error", error);
       
       if (authMode === 'login') {
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
-          message = 'E-mail ou senha incorretos';
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          toast.error("Email or Password Incorrect");
+        } else {
+          toast.error(error.message || 'Erro ao entrar');
         }
       } else if (authMode === 'register') {
         if (error.code === 'auth/email-already-in-use') {
-          message = 'Usuário já existe. Faça login?';
+          toast.error("User already exists. Sign in?");
           setAuthMode('login');
-        } else if (error.code === 'auth/weak-password') {
-          message = 'A senha é muito fraca.';
+        } else {
+          toast.error(error.message || 'Erro ao criar conta');
         }
+      } else {
+        toast.error(error.message || 'Erro de autenticação');
       }
-      
-      toast.error(message);
     } finally {
       setIsSigningIn(false);
     }
@@ -464,8 +561,7 @@ function AuthRequiredView() {
       setResetEmailSentTo(email);
       toast.success('Link de redefinição enviado!');
     } catch (error: any) {
-      console.error("Forgot password error:", error);
-      toast.error('Erro ao enviar link de redefinição');
+      toast.error(error.message || 'Erro ao enviar e-mail de redefinição');
     } finally {
       setIsSigningIn(false);
     }
@@ -480,7 +576,7 @@ function AuthRequiredView() {
           </div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight">E-mail Enviado</h2>
           <p className="text-gray-500 text-sm font-medium">
-            Enviamos um link de alteração de senha para <span className="text-green-600 font-bold">{resetEmailSentTo}</span>.
+            We sent you a password change link to <span className="text-green-600 font-bold">{resetEmailSentTo}</span>.
           </p>
           <button 
             onClick={() => {
@@ -489,7 +585,7 @@ function AuthRequiredView() {
             }}
             className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all"
           >
-            Entrar
+            Sign In
           </button>
         </div>
       </div>
@@ -574,7 +670,7 @@ function AuthRequiredView() {
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Como quer ser chamado?" 
+                placeholder="Seu nome completo" 
                 className="w-full px-6 py-3 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-green-500 transition-all"
               />
             </div>
@@ -664,8 +760,37 @@ function AuthRequiredView() {
             disabled={isSigningIn}
             className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 transition-all disabled:opacity-50"
           >
-            {isSigningIn ? 'Processando...' : (authMode === 'login' ? 'Entrar' : authMode === 'register' ? 'Criar Conta' : 'Obter Link de Redefinição')}
+            {isSigningIn ? 'Processando...' : (authMode === 'login' ? 'Entrar' : authMode === 'register' ? 'Criar Conta' : 'Get Reset Link')}
           </button>
+
+          {authMode !== 'forgot-password' && (
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-100"></div>
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
+                <span className="bg-white px-4 text-gray-400">Ou continue com</span>
+              </div>
+            </div>
+          )}
+
+          {authMode !== 'forgot-password' && (
+            <button 
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isSigningIn}
+              className="w-full py-4 bg-white border border-gray-100 text-gray-700 rounded-2xl font-bold shadow-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Google
+            </button>
+          )}
+
           {authMode === 'forgot-password' && (
             <button 
               type="button"
@@ -710,52 +835,33 @@ function RestrictedAreaView({ title, message }: { title?: string, message?: stri
 }
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        
-        if (firebaseUser.emailVerified || firebaseUser.email === 'isacruimugabe@gmail.com') {
-          // Try to get profile
-          try {
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            
-            if (userDoc.exists()) {
-              setUserProfile(userDoc.data() as UserProfile);
-            } else {
-              // Create the profile in Firestore if it doesn't exist
-              const newProfile: UserProfile = {
-                uid: firebaseUser.uid,
-                displayName: firebaseUser.displayName || 'Usuário',
-                email: firebaseUser.email || '',
-                photoURL: firebaseUser.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + firebaseUser.uid,
-                role: firebaseUser.email === 'isacruimugabe@gmail.com' ? 'admin' : 'client',
-                createdAt: new Date().toISOString(),
-              };
-              
-              await setDoc(userDocRef, newProfile);
-              setUserProfile(newProfile);
-            }
-          } catch (e) {
-            console.error("Error fetching/creating profile:", e);
-            // Fallback to basic profile from auth if Firestore fails
-            setUserProfile({
-              uid: firebaseUser.uid,
-              displayName: firebaseUser.displayName || 'Usuário',
-              email: firebaseUser.email || '',
-              photoURL: firebaseUser.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + firebaseUser.uid,
-              role: firebaseUser.email === 'isacruimugabe@gmail.com' ? 'admin' : 'client',
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser && authUser.emailVerified) {
+        setUser(authUser);
+        try {
+          const profileDoc = await getDoc(doc(db, 'users', authUser.uid));
+          if (profileDoc.exists()) {
+            setUserProfile(profileDoc.data() as UserProfile);
+          } else {
+            // Fallback sync if listener triggers before handleEmailAuth finishes
+            const fallbackProfile: UserProfile = {
+              uid: authUser.uid,
+              displayName: authUser.displayName || 'Usuário',
+              email: authUser.email || '',
+              photoURL: authUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${authUser.uid}`,
+              role: authUser.email === 'isacruimugabe@gmail.com' ? 'admin' : 'client',
               createdAt: new Date().toISOString(),
-            });
+              emailVerified: authUser.emailVerified
+            };
+            setUserProfile(fallbackProfile);
           }
-        } else {
-          // User is logged in but not verified
-          setUserProfile(null);
+        } catch (error) {
+          console.error("Error fetching profile", error);
         }
       } else {
         setUser(null);
@@ -780,23 +886,19 @@ export default function App() {
 
   return (
     <Router>
-      <ScrollToTop />
-      <NotificationListener userProfile={userProfile} />
-      <Layout userProfile={userProfile} user={user}>
-        <ErrorBoundary>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/categories" element={<CategoriesPage />} />
-            <Route path="/product/:id" element={<ProductDetailsPage />} />
-            <Route path="/auth" element={user ? <Navigate to="/" /> : <AuthRequiredView />} />
-            <Route path="/chat" element={user ? <ChatPage userProfile={userProfile} /> : <RestrictedAreaView title="Mensagens Restritas" message="Somente usuários cadastrados podem enviar e receber mensagens no MultiVendas." />} />
-            <Route path="/profile" element={user ? <ProfilePage userProfile={userProfile} /> : <AuthRequiredView />} />
-            <Route path="/portal-admin-secreto" element={userProfile?.role === 'admin' || user?.email === 'isacruimugabe@gmail.com' ? <AdminPage /> : <Navigate to="/" />} />
-            <Route path="/termos" element={<TermsOfUsePage />} />
-            <Route path="/como-comprar" element={<HowToBuyPage />} />
-            <Route path="/seguranca" element={<SecurityPage />} />
-          </Routes>
-        </ErrorBoundary>
+      <Layout userProfile={userProfile} user={user} setUser={setUser} setUserProfile={setUserProfile}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/product/:id" element={<ProductDetailsPage />} />
+          <Route path="/auth" element={user ? <Navigate to="/" /> : <AuthRequiredView setUserProfile={setUserProfile} setUser={setUser} />} />
+          <Route path="/chat" element={user ? <ChatPage userProfile={userProfile} /> : <RestrictedAreaView title="Mensagens Restritas" message="Somente usuários cadastrados podem enviar e receber mensagens no MultiVendas." />} />
+          <Route path="/profile" element={user ? <ProfilePage userProfile={userProfile} /> : <AuthRequiredView setUserProfile={setUserProfile} setUser={setUser} />} />
+          <Route path="/portal-admin-secreto" element={userProfile?.role === 'admin' ? <AdminPage /> : <Navigate to="/" />} />
+          <Route path="/termos" element={<TermsOfUsePage />} />
+          <Route path="/como-comprar" element={<HowToBuyPage />} />
+          <Route path="/seguranca" element={<SecurityPage />} />
+        </Routes>
       </Layout>
       <Toaster position="top-center" />
     </Router>

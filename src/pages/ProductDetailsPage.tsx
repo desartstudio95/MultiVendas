@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, addDoc, collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '../firebase';
 import { Product, Review, Order } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
+import { MOCK_PRODUCTS } from '../mockData';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { 
   ChevronLeft, 
   Share2, 
@@ -22,7 +23,7 @@ import {
   Send,
   Truck
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function ProductDetailsPage() {
@@ -42,103 +43,49 @@ export default function ProductDetailsPage() {
 
   useEffect(() => {
     if (id) {
+      const fetchProduct = async () => {
+        setLoading(true);
+        try {
+          const productDoc = await getDoc(doc(db, 'products', id));
+          if (productDoc.exists()) {
+            setProduct({ id: productDoc.id, ...productDoc.data() } as Product);
+          } else {
+            const foundProduct = MOCK_PRODUCTS.find(p => p.id === id);
+            if (foundProduct) {
+              setProduct(foundProduct as Product);
+            } else {
+              toast.error("Produto não encontrado");
+              navigate('/');
+            }
+          }
+        } catch (error: any) {
+          if (error?.message?.includes('permissions')) {
+            toast.error("Erro de Permissão no Firebase");
+          }
+          console.error("Fetch error:", error);
+          const foundProduct = MOCK_PRODUCTS.find(p => p.id === id);
+          if (foundProduct) {
+            setProduct(foundProduct as Product);
+          } else {
+            toast.error("Produto não encontrado");
+            navigate('/');
+          }
+        } finally {
+          setLoading(false);
+        }
+      };
+
       fetchProduct();
-      fetchReviews();
-      checkPurchaseStatus();
     }
   }, [id]);
 
-  const fetchProduct = async () => {
-    try {
-      const docRef = doc(db, 'products', id!);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
-      } else {
-        toast.error("Produto não encontrado");
-        navigate('/');
-      }
-    } catch (error) {
-      console.error("Error fetching product:", error);
-      toast.error("Erro ao carregar produto");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchReviews = () => {
-    const q = query(
-      collection(db, 'reviews'),
-      where('productId', '==', id)
-    );
-
-    return onSnapshot(q, (snapshot) => {
-      const reviewsData = snapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) as Review[];
-      setReviews(reviewsData);
-    });
-  };
-
-  const checkPurchaseStatus = async () => {
-    if (!auth.currentUser || !id) return;
-    
-    // Simplify query to avoid composite index
-    const q = query(
-      collection(db, 'orders'),
-      where('userId', '==', auth.currentUser.uid)
-    );
-    
-    const { getDocs } = await import('firebase/firestore');
-    const querySnapshot = await getDocs(q);
-    const hasPurchased = querySnapshot.docs.some(doc => {
-      const data = doc.data();
-      return data.productId === id && ['paid', 'delivered'].includes(data.status);
-    });
-    setUserHasPurchased(hasPurchased);
-  };
-
   const handleMessage = () => {
-    if (!auth.currentUser) {
-      toast.error("Faça login para enviar mensagens");
-      return;
-    }
-    navigate('/chat');
+    toast.error("Funcionalidade de chat desativada (sem Firebase)");
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth.currentUser || !product) return;
-    if (!newComment.trim()) {
-      toast.error("Escreva um comentário");
-      return;
-    }
-
-    setIsSubmittingReview(true);
-    try {
-      await addDoc(collection(db, 'reviews'), {
-        productId: product.id,
-        userId: auth.currentUser.uid,
-        userName: auth.currentUser.displayName || 'Usuário',
-        userPhoto: auth.currentUser.photoURL || '',
-        rating: newRating,
-        comment: newComment,
-        createdAt: new Date().toISOString(),
-      });
-      
-      toast.success("Avaliação enviada com sucesso!");
-      setNewComment('');
-      setNewRating(5);
-      setShowReviewForm(false);
-    } catch (error) {
-      console.error("Error submitting review:", error);
-      toast.error("Erro ao enviar avaliação");
-    } finally {
-      setIsSubmittingReview(false);
-    }
+    toast.error("Avaliações desativadas (sem Firebase)");
   };
 
   const nextImage = () => {
