@@ -219,19 +219,19 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 2 — HERO SECTION                                                          */}
       {/* ========================================================================= */}
-      <section className="relative rounded-3xl md:rounded-[36px] overflow-hidden bg-gray-950 text-white border border-gray-800/80 shadow-2xl">
+      <section className="relative rounded-3xl md:rounded-[36px] overflow-hidden bg-green-950 text-white border border-green-800/80 shadow-2xl">
         {/* Background Image with Controlled Cinematic Scrim */}
         <div className="absolute inset-0 z-0">
           <img 
             src="https://i.ibb.co/ZRc6N6Cy/3c9a2d6b-93a8-46be-b915-d36d4ae3e7a7.jpg" 
             alt="MultiVendas Moçambique" 
-            className="w-full h-full object-cover object-center opacity-35 filter brightness-90"
+            className="w-full h-full object-cover object-center opacity-[0.98] filter brightness-95"
             referrerPolicy="no-referrer"
             loading="eager"
           />
-          {/* Gradients to guarantee high contrast and depth */}
-          <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-gray-950 via-gray-950/90 to-gray-950/40" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-950/80" />
+          {/* Gradients in green tones for branding and readability */}
+          <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-green-950/80 via-green-950/50 to-green-900/20" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-green-950/60" />
         </div>
 
         <div className="relative z-10 p-6 sm:p-8 md:p-12 lg:p-16">
@@ -342,18 +342,18 @@ export default function HomePage() {
 
             {/* Right / Opportunities Panel ("Explore oportunidades") */}
             <div className="lg:col-span-5">
-              <div className="bg-gray-900/80 backdrop-blur-xl border border-gray-800/90 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl">
-                <div className="flex items-center justify-between pb-4 border-b border-gray-800 mb-4">
+              <div className="bg-green-950/70 backdrop-blur-xl border border-green-800/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl">
+                <div className="flex items-center justify-between pb-4 border-b border-green-800/70 mb-4">
                   <div>
                     <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-orange-400" />
                       <span>Explore oportunidades</span>
                     </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">Acesso rápido aos segmentos mais procurados</p>
+                    <p className="text-xs text-green-200/80 mt-0.5">Acesso rápido aos segmentos mais procurados</p>
                   </div>
                   <Link 
                     to="/categories" 
-                    className="text-xs font-semibold text-green-400 hover:text-green-300 flex items-center gap-1 transition-colors"
+                    className="text-xs font-semibold text-green-300 hover:text-green-200 flex items-center gap-1 transition-colors"
                   >
                     Ver todas <ChevronRight className="w-3.5 h-3.5" />
                   </Link>
@@ -366,16 +366,16 @@ export default function HomePage() {
                       <Link 
                         key={item.name}
                         to={`/categories?cat=${encodeURIComponent(item.name)}`}
-                        className="p-3.5 rounded-xl bg-gray-950/60 border border-gray-800/80 hover:border-green-500/60 hover:bg-gray-800/50 transition-all duration-200 group flex items-start gap-3"
+                        className="p-3.5 rounded-xl bg-green-900/40 border border-green-800/60 hover:border-green-400/80 hover:bg-green-800/50 transition-all duration-200 group flex items-start gap-3 backdrop-blur-sm"
                       >
-                        <div className="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-green-600 group-hover:text-white transition-all duration-200">
+                        <div className="w-10 h-10 rounded-xl bg-green-500/20 border border-green-400/30 text-green-300 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-green-600 group-hover:text-white transition-all duration-200">
                           <Icon className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-white group-hover:text-green-400 transition-colors truncate">
+                          <p className="text-sm font-bold text-white group-hover:text-green-300 transition-colors truncate">
                             {item.label}
                           </p>
-                          <p className="text-xs text-gray-400 leading-tight mt-0.5 line-clamp-1">
+                          <p className="text-xs text-green-200/70 leading-tight mt-0.5 line-clamp-1">
                             {item.desc}
                           </p>
                         </div>
@@ -385,7 +385,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Direct Help Callout */}
-                <div className="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between text-xs text-gray-400">
+                <div className="mt-4 pt-4 border-t border-green-800/70 flex items-center justify-between text-xs text-green-200/80">
                   <span className="flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-orange-400" />
                     <span>Maputo & Províncias</span>
@@ -394,7 +394,7 @@ export default function HomePage() {
                     href="https://wa.me/258873319094" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-green-400 hover:text-green-300 font-bold transition-colors"
+                    className="text-green-300 hover:text-white font-bold transition-colors"
                   >
                     WhatsApp: +258 873 319 094
                   </a>
