@@ -1,5 +1,5 @@
 {
   "name": "MultiVendas",
-  "description": "MultiVendas - O marketplace moderno de Moçambique. Conectando você aos melhores produtos e serviços.",
+  "description": "MultiVendas – Vendas inteligentes, resultados reais. Compre e venda viaturas, imóveis, electrónicos, moda e equipamentos em Moçambique.",
   "requestFramePermissions": ["geolocation"]
 }

@@ -34,6 +34,26 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "price", "category", "images", "status"]
+    },
+    "PageContent": {
+      "title": "Page Content",
+      "description": "Customizable page content for CMS",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "AppConfig": {
+      "title": "App Config",
+      "description": "Global application configuration",
+      "type": "object",
+      "properties": {
+        "maintenance": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -44,6 +64,14 @@
     "/products/{productId}": {
       "schema": "Product",
       "description": "Product listings"
+    },
+    "/pages/{pageId}": {
+      "schema": "PageContent",
+      "description": "Customizable page contents"
+    },
+    "/config/{configId}": {
+      "schema": "AppConfig",
+      "description": "App configuration parameters"
     }
   }
 }

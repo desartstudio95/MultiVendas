@@ -6,7 +6,7 @@ import { getAnalytics } from 'firebase/analytics';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const storage = getStorage(app, `gs://${firebaseConfig.storageBucket.replace('gs://', '')}`);
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;

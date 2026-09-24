@@ -1,28 +1,31 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Product, Review, Order } from '../types';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Product } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
-import { MOCK_PRODUCTS } from '../mockData';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
   ChevronLeft, 
+  ChevronRight, 
   Share2, 
   Heart, 
   MapPin, 
   ShieldCheck, 
+  Phone, 
   MessageCircle, 
-  ShoppingCart,
-  CheckCircle2,
-  Clock,
-  ArrowRight,
-  Phone,
-  ChevronRight as ChevronRightIcon,
-  Star,
-  User,
-  Send,
-  Truck,
-  X
+  CheckCircle2, 
+  Clock, 
+  AlertTriangle, 
+  Maximize2, 
+  X, 
+  Tag, 
+  Truck, 
+  Building, 
+  User, 
+  Calendar,
+  Lock,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -33,15 +36,8 @@ export default function ProductDetailsPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  
-  // Reviews state
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [userHasPurchased, setUserHasPurchased] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [newRating, setNewRating] = useState(5);
-  const [newComment, setNewComment] = useState('');
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -50,28 +46,53 @@ export default function ProductDetailsPage() {
         try {
           const productDoc = await getDoc(doc(db, 'products', id));
           if (productDoc.exists()) {
-            setProduct({ id: productDoc.id, ...productDoc.data() } as Product);
-          } else {
-            const foundProduct = MOCK_PRODUCTS.find(p => p.id === id);
-            if (foundProduct) {
-              setProduct(foundProduct as Product);
-            } else {
-              toast.error("Produto não encontrado");
-              navigate('/');
+            const data = { id: productDoc.id, ...productDoc.data() } as Product;
+            setProduct(data);
+
+            // Update SEO & Social Meta
+            const titleStr = `${data.title} – ${formatCurrency(data.price)} | MultiVendas Moçambique`;
+            document.title = titleStr;
+
+            // Structured Data JSON-LD
+            const schemaData = {
+              "@context": "https://schema.org/",
+              "@type": "Product",
+              "name": data.title,
+              "image": data.images?.[0] || "",
+              "description": data.description || data.title,
+              "sku": data.reference || `MV-${data.id.slice(0, 6).toUpperCase()}`,
+              "offers": {
+                "@type": "Offer",
+                "priceCurrency": "MZN",
+                "price": data.price,
+                "availability": data.status === 'sold' ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+                "itemCondition": "https://schema.org/UsedCondition"
+              }
+            };
+
+            const existingScript = document.getElementById('jsonld-product');
+            if (existingScript) existingScript.remove();
+
+            const script = document.createElement('script');
+            script.id = 'jsonld-product';
+            script.type = 'application/ld+json';
+            script.text = JSON.stringify(schemaData);
+            document.head.appendChild(script);
+
+            // Check favorite state
+            try {
+              const favs = JSON.parse(localStorage.getItem('multivendas_favs') || '[]');
+              setIsFavorite(favs.includes(data.id));
+            } catch {
+              // Ignore localStorage error
             }
+          } else {
+            toast.error("Anúncio não encontrado.");
+            navigate('/categories');
           }
         } catch (error: any) {
-          if (error?.message?.includes('permissions')) {
-            toast.error("Erro de Permissão no Firebase");
-          }
-          console.error("Fetch error:", error);
-          const foundProduct = MOCK_PRODUCTS.find(p => p.id === id);
-          if (foundProduct) {
-            setProduct(foundProduct as Product);
-          } else {
-            toast.error("Produto não encontrado");
-            navigate('/');
-          }
+          console.error("Fetch product error:", error);
+          toast.error("Erro ao carregar o anúncio.");
         } finally {
           setLoading(false);
         }
@@ -79,420 +100,489 @@ export default function ProductDetailsPage() {
 
       fetchProduct();
     }
-  }, [id]);
 
-  const handleMessage = () => {
-    toast.error("Funcionalidade de chat desativada (sem Firebase)");
-  };
+    return () => {
+      document.title = "MultiVendas – Vendas inteligentes, resultados reais | Moçambique";
+      const existingScript = document.getElementById('jsonld-product');
+      if (existingScript) existingScript.remove();
+    };
+  }, [id, navigate]);
 
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.error("Avaliações desativadas (sem Firebase)");
-  };
-
-  const nextImage = () => {
-    if (product?.images) {
-      setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
+  const toggleFavorite = () => {
+    if (!product) return;
+    try {
+      const favs = JSON.parse(localStorage.getItem('multivendas_favs') || '[]');
+      let updated: string[];
+      if (favs.includes(product.id)) {
+        updated = favs.filter((itemId: string) => itemId !== product.id);
+        setIsFavorite(false);
+        toast.info("Removido dos anúncios guardados");
+      } else {
+        updated = [...favs, product.id];
+        setIsFavorite(true);
+        toast.success("Anúncio guardado com sucesso!");
+      }
+      localStorage.setItem('multivendas_favs', JSON.stringify(updated));
+    } catch {
+      setIsFavorite(!isFavorite);
     }
   };
 
-  const prevImage = () => {
-    if (product?.images) {
-      setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareTitle = product?.title || 'MultiVendas';
+    const shareText = `Veja este anúncio na MultiVendas: ${product?.title} por ${formatCurrency(product?.price || 0)}!\n${shareUrl}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch {
+        // User dismissed
+      }
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Link do anúncio copiado para a área de transferência!");
     }
   };
-
-  const averageRating = reviews.length > 0 
-    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
-    : "4.8"; // Default fallback
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-medium text-slate-500">Carregando detalhes do anúncio...</p>
       </div>
     );
   }
 
   if (!product) return null;
 
+  const images = product.images?.length > 0 
+    ? product.images 
+    : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80'];
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const sellerPhoneClean = (product.sellerPhone || product.sellerContacts?.[0] || '+258873319094').replace(/\D/g, '');
+  const refCode = product.reference || `MV-${product.id.slice(0, 6).toUpperCase()}`;
+  const sellerName = product.sellerName || 'MultiVendas';
+  const condition = product.condition || 'Usado';
+  const location = product.location || 'Moçambique';
+
+  const waMessage = `Olá ${sellerName}! Vi o anúncio "${product.title}" (${refCode}) no valor de ${formatCurrency(product.price)} na MultiVendas e tenho interesse em negociar. O produto ainda está disponível?`;
+  const waUrl = `https://wa.me/${sellerPhoneClean}?text=${encodeURIComponent(waMessage)}`;
+  const telUrl = `tel:+${sellerPhoneClean}`;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-24 md:pb-6">
-      {/* Header Actions */}
-      <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-          <ChevronLeft className="w-6 h-6 text-gray-900" />
-        </button>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => {
-              const url = window.location.href;
-              const text = `Confira este produto na MultiVendas: ${product.title} por ${formatCurrency(product.price)}! ${url}`;
-              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-            }}
-            className="p-2 bg-white rounded-full shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors"
+    <div className="space-y-8 pb-20 md:pb-12 max-w-6xl mx-auto">
+      {/* Top Breadcrumbs & Action Bar */}
+      <div className="flex items-center justify-between text-xs text-slate-500">
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <Link to="/" className="hover:text-slate-900 transition-colors">Início</Link>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <Link to={`/categories?cat=${encodeURIComponent(product.category)}`} className="hover:text-slate-900 transition-colors truncate">
+            {product.category}
+          </Link>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <span className="text-slate-800 font-semibold truncate max-w-[200px]">{refCode}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleFavorite}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors"
           >
-            <Share2 className="w-5 h-5 text-gray-600" />
+            <Heart className={cn("w-4 h-4", isFavorite ? "fill-red-500 text-red-500" : "")} />
+            <span className="hidden sm:inline">{isFavorite ? "Guardado" : "Guardar"}</span>
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Partilhar</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Image Carousel */}
-        <div className="space-y-4">
-          <div className="aspect-square relative rounded-[40px] overflow-hidden bg-white border border-gray-100 shadow-sm group">
-            <AnimatePresence mode="wait">
-              <motion.img 
-                key={currentImageIndex}
-                src={product.images[currentImageIndex]} 
-                alt={product.title} 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="w-full h-full object-cover cursor-zoom-in"
-                referrerPolicy="no-referrer"
-                onClick={() => setIsZoomOpen(true)}
-              />
-            </AnimatePresence>
-            
-            {product.images.length > 1 && (
+      {/* Main Grid: Gallery (Left) vs Purchase Module (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* LEFT: IMAGE GALLERY */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="relative aspect-[4/3] bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-sm group">
+            <img 
+              src={images[currentImageIndex]} 
+              alt={product.title}
+              className="w-full h-full object-cover transition-transform duration-300"
+              referrerPolicy="no-referrer"
+            />
+
+            {/* Sold Banner */}
+            {product.status === 'sold' && (
+              <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center">
+                <span className="px-6 py-2.5 bg-red-600 text-white font-extrabold uppercase tracking-widest text-sm rounded-xl shadow-xl">
+                  Anúncio Vendido
+                </span>
+              </div>
+            )}
+
+            {/* Navigation Arrows */}
+            {images.length > 1 && (
               <>
-                <button 
+                <button
                   onClick={prevImage}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md shadow-md flex items-center justify-center text-slate-800 hover:bg-white transition-opacity opacity-90 hover:opacity-100"
+                  aria-label="Imagem anterior"
                 >
-                  <ChevronLeft className="w-5 h-5 text-gray-900" />
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button 
+                <button
                   onClick={nextImage}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md shadow-md flex items-center justify-center text-slate-800 hover:bg-white transition-opacity opacity-90 hover:opacity-100"
+                  aria-label="Próxima imagem"
                 >
-                  <ChevronRightIcon className="w-5 h-5 text-gray-900" />
+                  <ChevronRight className="w-5 h-5" />
                 </button>
-                
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-                  {product.images.map((_, i) => (
-                    <div 
-                      key={i}
-                      className={cn(
-                        "w-2 h-2 rounded-full transition-all",
-                        i === currentImageIndex ? "bg-green-600 w-4" : "bg-gray-300"
-                      )}
-                    />
-                  ))}
-                </div>
               </>
             )}
+
+            {/* Fullscreen Trigger */}
+            <button
+              onClick={() => setIsFullscreen(true)}
+              className="absolute top-3 right-3 p-2 rounded-xl bg-slate-900/70 backdrop-blur-md text-white hover:bg-slate-900 transition-colors shadow-sm"
+              title="Ver em ecrã inteiro"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+
+            {/* Image Counter */}
+            <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-slate-900/70 backdrop-blur-md text-white text-xs font-semibold">
+              {currentImageIndex + 1} / {images.length}
+            </div>
           </div>
-          
-          {product.images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {product.images.map((img, i) => (
-                <button 
-                  key={i} 
-                  onClick={() => setCurrentImageIndex(i)}
+
+          {/* Thumbnails Row */}
+          {images.length > 1 && (
+            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentImageIndex(idx)}
                   className={cn(
-                    "flex-shrink-0 w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all",
-                    i === currentImageIndex ? "border-green-600 scale-95" : "border-transparent opacity-60 hover:opacity-100"
+                    "w-20 h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all bg-slate-100",
+                    idx === currentImageIndex 
+                      ? "border-emerald-600 ring-2 ring-emerald-500/20" 
+                      : "border-slate-200 opacity-70 hover:opacity-100"
                   )}
                 >
-                  <img 
-                    src={img} 
-                    alt="" 
-                    className="w-full h-full object-cover" 
-                    referrerPolicy="no-referrer" 
-                    loading="lazy"
-                  />
+                  <img src={img} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </button>
               ))}
             </div>
           )}
+
+          {/* Product Description */}
+          <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/90 shadow-sm space-y-4">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span>Descrição do Anúncio</span>
+            </h2>
+            <div className="prose prose-slate max-w-none text-slate-700 text-sm leading-relaxed whitespace-pre-line">
+              {product.description || "Nenhuma descrição detalhada fornecida pelo vendedor."}
+            </div>
+          </div>
+
+          {/* Características / Especificações */}
+          <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/90 shadow-sm space-y-4">
+            <h2 className="text-lg font-bold text-slate-900">Características</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[11px] text-slate-400 font-semibold uppercase">Categoria</p>
+                <p className="text-xs font-bold text-slate-800 mt-0.5">{product.category}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[11px] text-slate-400 font-semibold uppercase">Estado</p>
+                <p className="text-xs font-bold text-slate-800 mt-0.5">{condition}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[11px] text-slate-400 font-semibold uppercase">Localização</p>
+                <p className="text-xs font-bold text-slate-800 mt-0.5">{location}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[11px] text-slate-400 font-semibold uppercase">Entrega</p>
+                <p className="text-xs font-bold text-slate-800 mt-0.5">{product.delivery || 'A combinar'}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[11px] text-slate-400 font-semibold uppercase">Referência</p>
+                <p className="text-xs font-bold text-slate-800 mt-0.5">{refCode}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[11px] text-slate-400 font-semibold uppercase">Status</p>
+                <p className="text-xs font-bold text-emerald-700 mt-0.5">
+                  {product.status === 'sold' ? 'Vendido' : 'Disponível'}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Product Info */}
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                {product.category}
+        {/* RIGHT: CONTIGUOUS PURCHASE & NEGOTIATION MODULE */}
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+          <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/90 shadow-sm space-y-6">
+            {/* Metadata Line */}
+            <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+              <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                {condition}
               </span>
-              <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-lg">
-                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                <span className="text-[10px] font-bold text-yellow-700">{averageRating}</span>
-                <span className="text-[10px] text-yellow-600/60">({reviews.length})</span>
-              </div>
-              <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                <Clock className="w-3 h-3" /> Publicado hoje
+              <span aria-hidden="true" className="text-slate-300">·</span>
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                {location}
               </span>
+              <span aria-hidden="true" className="text-slate-300">·</span>
+              <span className="text-slate-400">Ref: {refCode}</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 leading-tight">{product.title}</h1>
-            <div className="flex items-center gap-2 text-gray-500">
-              <MapPin className="w-4 h-4" />
-              <span className="text-sm font-medium">{product.location}, Moçambique</span>
-            </div>
-          </div>
 
-          <div className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-gray-900">{formatCurrency(product.price)}</span>
-              </div>
-              {product.status === 'sold' && (
-                <span className="px-4 py-1.5 bg-red-100 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest border border-red-200">
-                  Vendido
-                </span>
-              )}
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              {product.sellerContacts && product.sellerContacts.length > 0 ? (
-                product.sellerContacts.map((contact, index) => (
-                  <a 
-                    key={index}
-                    href={product.status === 'sold' ? undefined : `https://wa.me/${contact.replace(/\D/g, '')}?text=Olá! Tenho interesse no produto: ${product.title}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      "w-full py-4 text-white rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2",
-                      product.status === 'sold' 
-                        ? "bg-gray-400 cursor-not-allowed shadow-none pointer-events-none" 
-                        : "bg-green-500 hover:bg-green-600 shadow-green-100"
-                    )}
-                  >
-                    <Phone className="w-5 h-5" />
-                    {product.status === 'sold' ? 'Produto Indisponível' : `WhatsApp ${product.sellerContacts!.length > 1 ? index + 1 : ''} (MultiVendas)`}
-                  </a>
-                ))
-              ) : (
-                <a 
-                  href={product.status === 'sold' ? undefined : `https://wa.me/${product.sellerPhone?.replace(/\D/g, '') || '258840000000'}?text=Olá! Tenho interesse no produto: ${product.title}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "w-full py-4 text-white rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2",
-                    product.status === 'sold' 
-                      ? "bg-gray-400 cursor-not-allowed shadow-none pointer-events-none" 
-                      : "bg-green-500 hover:bg-green-600 shadow-green-100"
+            {/* Title */}
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug">
+              {product.title}
+            </h1>
+
+            {/* Price Box */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-baseline justify-between">
+              <div>
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Preço anunciado</p>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+                    {formatCurrency(product.price)}
+                  </span>
+                  {product.negotiable !== false && (
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded">
+                      Negociável
+                    </span>
                   )}
-                >
-                  <Phone className="w-5 h-5" />
-                  {product.status === 'sold' ? 'Produto Indisponível' : `WhatsApp (MultiVendas)`}
-                </a>
-              )}
-              
-              <button 
-                onClick={handleMessage}
-                disabled={product.status === 'sold'}
+                </div>
+              </div>
+            </div>
+
+            {/* ACTION BUTTONS */}
+            <div className="space-y-3">
+              {/* PRIMARY CTA: NEGOCIAR PELO WHATSAPP */}
+              <a
+                href={product.status === 'sold' ? undefined : waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className={cn(
-                  "w-full py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 border-2",
-                  product.status === 'sold' 
-                    ? "bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed" 
-                    : "bg-white text-green-600 border-green-100 hover:bg-green-50"
+                  "w-full py-4 px-6 rounded-2xl font-bold text-base transition-all flex items-center justify-center gap-3 shadow-lg",
+                  product.status === 'sold'
+                    ? "bg-slate-300 text-slate-500 cursor-not-allowed pointer-events-none"
+                    : "bg-[#25D366] hover:bg-[#20ba5a] text-white shadow-emerald-600/20 active:scale-[0.99]"
                 )}
               >
-                <MessageCircle className="w-5 h-5" />
-                Chat no App
-              </button>
+                <MessageCircle className="w-5 h-5 fill-current" />
+                <span>NEGOCIAR PELO WHATSAPP</span>
+              </a>
+
+              {/* SECONDARY ROW */}
+              <div className="grid grid-cols-2 gap-3">
+                <a
+                  href={product.status === 'sold' ? undefined : telUrl}
+                  className={cn(
+                    "py-3 px-4 rounded-xl border border-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors",
+                    product.status === 'sold' && "pointer-events-none opacity-50"
+                  )}
+                >
+                  <Phone className="w-4 h-4 text-emerald-600" />
+                  <span>Ligar para vendedor</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate('/chat');
+                  }}
+                  className="py-3 px-4 rounded-xl border border-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4 text-slate-600" />
+                  <span>Chat na plataforma</span>
+                </button>
+              </div>
             </div>
-            
-            <div className="pt-4 border-t border-gray-50 flex items-center gap-3 text-green-600">
-              <ShieldCheck className="w-5 h-5" />
-              <p className="text-xs font-medium">Negocie com Segurança pela MultiVendas</p>
+
+            <div className="text-[11px] text-slate-400 flex items-center gap-1.5 justify-center pt-2">
+              <Clock className="w-3.5 h-3.5" />
+              <span>Publicado na MultiVendas · Contacto directo e sem taxas</span>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">Descrição</h3>
-            <p className="text-gray-600 leading-relaxed text-sm">
-              {product.description || "Nenhuma descrição detalhada fornecida para este produto."}
-            </p>
+          {/* VENDEDOR CARD: "Sobre o vendedor" */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Sobre o vendedor</h3>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-lg overflow-hidden shrink-0">
+                <User className="w-7 h-7 text-slate-400" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h4 className="text-base font-bold text-slate-900 truncate">{sellerName}</h4>
+                  <span title="Identidade verificada" className="inline-flex">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">{product.sellerType || 'Vendedor Verificado'}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Activo na MultiVendas desde 2024</p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100">
+              <Link
+                to={`/categories?search=${encodeURIComponent(sellerName)}`}
+                className="w-full py-2.5 px-4 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <span>Ver todos os anúncios deste vendedor</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-green-600 shadow-sm">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">Verificado</p>
-                <p className="text-xs font-bold text-gray-900">Qualidade Garantida</p>
-              </div>
+          {/* SEGURANÇA: "Negocie com segurança" */}
+          <div className="bg-emerald-50/60 rounded-3xl p-6 border border-emerald-100 shadow-sm space-y-3">
+            <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+              <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>Negocie com segurança</span>
             </div>
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-green-600 shadow-sm">
-                <Truck className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">Delivery</p>
-                <p className="text-xs font-bold text-gray-900">{product.delivery || 'A combinar'}</p>
-              </div>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-yellow-600 shadow-sm">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">Vendedor</p>
-                <p className="text-xs font-bold text-gray-900">MultiVendas</p>
-              </div>
+
+            <ul className="space-y-2 text-xs text-slate-600">
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-600 font-bold mt-0.5">•</span>
+                <span>Confirme o produto antes de efectuar quaisquer pagamentos antecipados.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-600 font-bold mt-0.5">•</span>
+                <span>Marque encontros em locais públicos e seguros em Moçambique.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-600 font-bold mt-0.5">•</span>
+                <span>Confirme a documentação e propriedade quando se tratar de viaturas ou imóveis.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-emerald-600 font-bold mt-0.5">•</span>
+                <span>Não partilhe códigos pessoais de M-Pesa, E-Mola ou dados bancários.</span>
+              </li>
+            </ul>
+
+            <div className="pt-2">
+              <Link to="/seguranca" className="text-xs font-bold text-emerald-700 hover:underline inline-flex items-center gap-1">
+                <span>Ver guia completo de segurança</span>
+                <ChevronRight className="w-3 h-3" />
+              </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Reviews Section */}
+      {/* FULLSCREEN MODAL */}
       <AnimatePresence>
-        {isZoomOpen && (
+        {isFullscreen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-8"
-            onClick={() => setIsZoomOpen(false)}
+            className="fixed inset-0 z-[120] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between p-4 md:p-8"
           >
-            <button 
-              className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-[110]"
-              onClick={() => setIsZoomOpen(false)}
-            >
-              <X className="w-6 h-6" />
-            </button>
-            
-            <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-              <motion.img
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                src={product.images[currentImageIndex]}
+            {/* Top Bar */}
+            <div className="flex items-center justify-between text-white">
+              <div className="text-sm font-semibold">
+                {product.title} ({currentImageIndex + 1} de {images.length})
+              </div>
+              <button
+                onClick={() => setIsFullscreen(false)}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Image Stage */}
+            <div className="relative flex-1 flex items-center justify-center max-h-[80vh] my-4">
+              <img
+                src={images[currentImageIndex]}
                 alt={product.title}
-                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+                className="max-h-full max-w-full object-contain rounded-xl shadow-2xl"
                 referrerPolicy="no-referrer"
               />
+
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </>
+              )}
             </div>
-            
-            {product.images.length > 1 && (
-              <>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                  className="absolute left-6 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+
+            {/* Bottom Strip */}
+            <div className="flex gap-2 justify-center overflow-x-auto py-2">
+              {images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentImageIndex(i)}
+                  className={cn(
+                    "w-14 h-14 rounded-lg overflow-hidden border-2 transition-all",
+                    i === currentImageIndex ? "border-emerald-500 scale-105" : "border-transparent opacity-60 hover:opacity-100"
+                  )}
                 >
-                  <ChevronLeft className="w-8 h-8" />
+                  <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                  className="absolute right-6 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-                >
-                  <ChevronRightIcon className="w-8 h-8" />
-                </button>
-              </>
-            )}
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <section className="pt-8 border-t border-gray-100 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold text-gray-900">Avaliações</h2>
-            <p className="text-sm text-gray-500">O que outros compradores dizem sobre este produto.</p>
-          </div>
-          {userHasPurchased && !showReviewForm && (
-            <button 
-              onClick={() => setShowReviewForm(true)}
-              className="px-4 py-2 bg-green-50 text-green-600 rounded-xl font-bold text-sm hover:bg-green-100 transition-all"
-            >
-              Deixar Avaliação
-            </button>
-          )}
+      {/* MOBILE STICKY BOTTOM WHATSAPP CTA BAR (Strict 15% Viewport Cap) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 md:hidden shadow-lg flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] text-slate-400 font-semibold uppercase">Preço</p>
+          <p className="text-base font-extrabold text-slate-900 tracking-tight truncate tabular-nums">
+            {formatCurrency(product.price)}
+          </p>
         </div>
 
-        <AnimatePresence>
-          {showReviewForm && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-gray-50 rounded-[32px] p-6 border border-gray-100 overflow-hidden"
-            >
-              <form onSubmit={handleSubmitReview} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900">Sua Avaliação</h3>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setNewRating(star)}
-                        className="p-1"
-                      >
-                        <Star className={cn(
-                          "w-6 h-6 transition-all",
-                          star <= newRating ? "text-yellow-500 fill-yellow-500 scale-110" : "text-gray-300"
-                        )} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Conte-nos sua experiência com este produto..."
-                  className="w-full p-4 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-green-500 min-h-[100px] outline-none transition-all"
-                />
-                <div className="flex justify-end gap-3">
-                  <button 
-                    type="button"
-                    onClick={() => setShowReviewForm(false)}
-                    className="px-6 py-2 text-gray-500 font-bold text-sm"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={isSubmittingReview}
-                    className="px-6 py-2 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isSubmittingReview ? "Enviando..." : "Publicar"}
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+        <a
+          href={product.status === 'sold' ? undefined : waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 text-white shadow-md transition-all",
+            product.status === 'sold'
+              ? "bg-slate-300 text-slate-500 pointer-events-none"
+              : "bg-[#25D366] hover:bg-[#20ba5a]"
           )}
-        </AnimatePresence>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {reviews.length > 0 ? (
-            reviews.map((review) => (
-              <div key={review.id} className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img src={review.userPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.userId}`} alt="" className="w-10 h-10 rounded-xl border border-gray-100" />
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">{review.userName}</p>
-                      <p className="text-[10px] text-gray-400 font-medium">{new Date(review.createdAt).toLocaleDateString('pt-MZ')}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className={cn(
-                        "w-3 h-3",
-                        star <= review.rating ? "text-yellow-500 fill-yellow-500" : "text-gray-200"
-                      )} />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 leading-relaxed italic">"{review.comment}"</p>
-              </div>
-            ))
-          ) : (
-            <div className="md:col-span-2 text-center py-12 bg-gray-50 rounded-[40px] border border-dashed border-gray-200">
-              <Star className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-              <p className="text-gray-500 font-medium">Ainda não há avaliações para este produto.</p>
-              <p className="text-sm text-gray-400">Seja o primeiro a avaliar após sua compra!</p>
-            </div>
-          )}
-        </div>
-      </section>
+        >
+          <MessageCircle className="w-4 h-4 fill-current shrink-0" />
+          <span className="truncate">NEGOCIAR NO WHATSAPP</span>
+        </a>
+      </div>
     </div>
   );
 }

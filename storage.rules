@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Regras de Segurança do Firebase Storage para o MultiVendas
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Leitura: Qualquer pessoa pode ver as imagens (produtos, perfis, etc)
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+    
+    // Imagens de Perfil: Utilizadores autenticados podem editar a sua própria pasta
+    match /profiles/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Uploads de Utilizadores: Utilizadores podem enviar arquivos para as suas pastas
+    match /user_uploads/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Imagens de Produtos: Apenas admins podem fazer upload nesta pasta
+    // Nota: O Firebase Storage não tem acesso direto aos claims do Auth sem Custom Claims na JWT.
+    // Dependendo do seu fluxo, se os usuários normais também podem publicar produtos (marketplace aberto), 
+    // mude a regra para: if request.auth != null;
+    match /products/{allPaths=**} {
+      allow write: if request.auth != null; 
+    }
+  }
+}

@@ -2,11 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
     // --- Helpers ---
     function isSignedIn() {
       return request.auth != null;
@@ -26,6 +21,11 @@ service cloud.firestore {
 
     // --- Collections ---
 
+    match /pages/{pageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /users/{userId} {
       // Allow any signed in user to read profiles (needed for chat/seller info)
       // Allow only owner or admin to write
@@ -40,7 +40,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /config/app {
+    match /config/{configId} {
       // Allow anyone to read the app config (for maintenance mode check)
       allow read: if true;
       // Allow only admins to update the config

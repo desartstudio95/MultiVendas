@@ -75,12 +75,20 @@ function PagesEditor() {
     const fetchPage = async () => {
       setLoading(true);
       try {
-        const pageData = (MOCK_PAGES as any)[activePage];
-        if (pageData) {
+        const pageDoc = await getDoc(doc(db, 'pages', activePage));
+        if (pageDoc.exists()) {
+          const data = pageDoc.data();
           if (activePage === 'home') {
-            setHomeData(pageData);
+            setHomeData({ title: data.title || '', subtitle: data.subtitle || '' });
           } else {
-            setContent(pageData.content);
+            setContent(data.content || '');
+          }
+        } else {
+          // Fallback to empty if not found
+          if (activePage === 'home') {
+            setHomeData({ title: '', subtitle: '' });
+          } else {
+            setContent('');
           }
         }
       } catch (error) {
@@ -94,10 +102,18 @@ function PagesEditor() {
 
   const handleSave = async () => {
     setSaving(true);
-    setTimeout(() => {
+    try {
+      const dataToSave = activePage === 'home' ? homeData : { content };
+      await setDoc(doc(db, 'pages', activePage), {
+        ...dataToSave,
+        updatedAt: serverTimestamp()
+      });
+      toast.success("Página salva com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao salvar a página: " + error.message);
+    } finally {
       setSaving(false);
-      toast.success("Página salva com sucesso! (Simulado)");
-    }, 500);
+    }
   };
 
   return (
@@ -243,24 +259,10 @@ export default function AdminPage() {
         ...docSnapshot.data()
       })) as Product[];
 
-      if (firestoreProducts.length > 0) {
-        setProducts(firestoreProducts);
-      } else {
-        const localProducts = localStorage.getItem('demo_products');
-        if (localProducts) {
-          setProducts(JSON.parse(localProducts));
-        } else {
-          setProducts(MOCK_PRODUCTS as Product[]);
-        }
-      }
+      setProducts(firestoreProducts);
     } catch (error) {
       console.error("Fetch error:", error);
-      const localProducts = localStorage.getItem('demo_products');
-      if (localProducts) {
-        setProducts(JSON.parse(localProducts));
-      } else {
-        setProducts(MOCK_PRODUCTS as Product[]);
-      }
+      toast.error("Erro ao carregar produtos do Firebase.");
     } finally {
       setLoading(false);
     }
@@ -356,6 +358,15 @@ export default function AdminPage() {
           updatedAt: new Date().toISOString()
         });
       }
+      
+      // Seed MOCK_PAGES
+      for (const [key, value] of Object.entries(MOCK_PAGES)) {
+        await setDoc(doc(db, 'pages', key), {
+          ...value,
+          updatedAt: serverTimestamp()
+        });
+      }
+
       toast.success("Firebase populado com sucesso!");
       await fetchProducts();
     } catch (error: any) {
@@ -644,6 +655,13 @@ export default function AdminPage() {
                           title={product.status === 'disabled' ? "Ativar Produto" : "Desativar Produto"}
                         >
                           <XCircle className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Apagar Produto"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => {

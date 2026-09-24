@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import Markdown from 'react-markdown';
-import { MOCK_PAGES } from '../mockData';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function HowToBuyPage() {
   const [content, setContent] = useState('');
@@ -10,9 +11,9 @@ export default function HowToBuyPage() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const pageData = MOCK_PAGES.howToBuy;
-        if (pageData) {
-          setContent(pageData.content);
+        const pageDoc = await getDoc(doc(db, 'pages', 'how-to-buy'));
+        if (pageDoc.exists()) {
+          setContent(pageDoc.data().content || '');
         }
       } catch (error) {
         console.error("Error fetching how to buy:", error);
