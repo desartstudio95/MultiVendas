@@ -6,8 +6,6 @@ export interface UserProfile {
   role: 'admin' | 'client';
   createdAt: string;
   emailVerified: boolean;
-  phone?: string;
-  city?: string;
 }
 
 export interface Product {
@@ -24,23 +22,12 @@ export interface Product {
   status: 'active' | 'sold' | 'draft' | 'disabled';
   createdAt: string;
   updatedAt: string;
-  condition?: 'Novo' | 'Como Novo' | 'Usado' | 'Recondicionado';
-  sellerName?: string;
-  sellerId?: string;
-  sellerVerified?: boolean;
-  sellerType?: 'Particular' | 'Profissional' | 'Loja Oficial';
-  negotiable?: boolean;
-  reference?: string;
-  featured?: boolean;
-  views?: number;
-  attributes?: Record<string, string>;
 }
 
 export interface Category {
   id: string;
   name: string;
   icon: string;
-  count?: number;
 }
 
 export interface Order {

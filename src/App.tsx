@@ -111,94 +111,67 @@ function Layout({ children, userProfile, user, setUser, setUserProfile }: {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-16 pb-20 md:pb-0">
-      {/* Top Navbar (Desktop & Mobile) */}
-      <header className="fixed top-0 left-0 right-0 h-16 md:h-18 bg-white/95 backdrop-blur-md border-b border-gray-100 z-50 flex items-center justify-between px-4 md:px-8 shadow-xs">
-        <div className="flex items-center gap-4 lg:gap-8">
+      {/* Top Navbar (Desktop) */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50 flex items-center justify-between px-4 md:px-6">
+        <div className="flex items-center gap-4">
           <button 
-            className="md:hidden p-2 -ml-1 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             onClick={() => setIsMobileMenuOpen(true)}
-            aria-label="Abrir menu"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-6 h-6" />
           </button>
-          
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-              Multi<span className="text-green-600">Vendas</span>
-            </span>
+            <span className="text-xl font-bold text-gray-900">Multi<span className="text-green-600">Vendas</span></span>
           </Link>
-
-          {/* Desktop Nav Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold text-gray-600">
-            <Link to="/" className={cn("hover:text-green-600 transition-colors", location.pathname === '/' && "text-green-600")}>
-              Início
-            </Link>
-            <Link to="/categories" className={cn("hover:text-green-600 transition-colors", location.pathname === '/categories' && "text-green-600")}>
-              Categorias
-            </Link>
-            <Link to="/como-comprar" className={cn("hover:text-green-600 transition-colors", location.pathname === '/como-comprar' && "text-green-600")}>
-              Como Comprar
-            </Link>
-            <Link to="/seguranca" className={cn("hover:text-green-600 transition-colors", location.pathname === '/seguranca' && "text-green-600")}>
-              Segurança
-            </Link>
-          </nav>
         </div>
 
-        {/* Desktop Quick Search */}
-        <div className="flex-1 max-w-sm mx-4 hidden md:block">
+        <div className="flex-1 max-w-md mx-4 md:mx-8 hidden md:block">
           <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input 
               type="text" 
-              placeholder="Pesquisar na MultiVendas..." 
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 hover:bg-gray-100/80 focus:bg-white border border-gray-200/80 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
+              placeholder="Pesquisar produtos..." 
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm focus:ring-2 focus:ring-green-500 transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </form>
         </div>
 
-        {/* Header Actions */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Main CTA: Vender na MultiVendas */}
-          <a
-            href="https://wa.me/258873319094?text=Ol%C3%A1%2C%20gostaria%20de%20vender%20um%20bem%20na%20MultiVendas"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3.5 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Vender na MultiVendas</span>
-            <span className="sm:hidden">Vender</span>
-          </a>
-
+        <div className="flex items-center gap-2 md:gap-4">
           {isAdmin && (
-            <Link 
-              to="/portal-admin-secreto"
-              className="hidden xl:flex items-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-800 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors"
-            >
-              <ShieldCheck className="w-4 h-4 text-green-600" />
-              <span>Admin</span>
-            </Link>
-          )}
-
-          {userProfile ? (
-            <div className="flex items-center gap-2.5">
-              <Link to="/profile" className="flex items-center gap-2">
-                <img src={userProfile.photoURL} alt={userProfile.displayName} className="w-8 h-8 rounded-full border border-gray-200 object-cover" />
-                <div className="text-left hidden xl:block">
-                  <p className="text-xs font-bold text-gray-900 leading-tight truncate max-w-[100px]">{userProfile.displayName}</p>
-                </div>
+            <div className="hidden md:flex items-center gap-2">
+              <Link 
+                to="/portal-admin-secreto"
+                className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full text-sm font-medium hover:bg-green-100 transition-colors border border-green-100"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Publicar Anúncio</span>
               </Link>
-              <button onClick={logout} title="Sair" className="p-2 text-gray-400 hover:text-red-600 transition-colors hidden md:block">
-                <LogOut className="w-4 h-4" />
+              <Link 
+                to="/portal-admin-secreto"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                <ShieldCheck className="w-4 h-4 text-green-600" />
+                <span>Painel Admin</span>
+              </Link>
+            </div>
+          )}
+          {userProfile ? (
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden lg:block">
+                <p className="text-sm font-medium text-gray-900">{userProfile.displayName}</p>
+                <p className="text-xs text-gray-500 capitalize">{userProfile.role}</p>
+              </div>
+              <img src={userProfile.photoURL} alt="" className="w-8 h-8 rounded-full border border-gray-200" />
+              <button onClick={logout} className="p-2 text-gray-500 hover:text-red-600 transition-colors hidden md:block">
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           ) : (
             <Link 
               to="/auth"
-              className="px-3.5 py-2 border border-gray-200 hover:border-gray-900 text-gray-800 hover:text-gray-900 rounded-xl text-xs sm:text-sm font-bold transition-colors"
+              className="px-4 py-2 bg-green-600 text-white rounded-full text-sm font-medium hover:bg-green-700 transition-colors"
             >
               Entrar
             </Link>
@@ -215,54 +188,40 @@ function Layout({ children, userProfile, user, setUser, setUserProfile }: {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-gray-950/60 backdrop-blur-xs z-[60] md:hidden"
+              className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[60] md:hidden"
             />
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-4/5 max-w-sm bg-white z-[70] md:hidden flex flex-col shadow-2xl"
+              className="fixed top-0 left-0 bottom-0 w-3/4 max-w-sm bg-white z-[70] md:hidden flex flex-col shadow-2xl"
             >
               <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                 <Link to="/" className="flex items-center gap-2" onClick={() => setIsMobileMenuOpen(false)}>
-                  <span className="text-xl font-black text-gray-900">Multi<span className="text-green-600">Vendas</span></span>
+                  <span className="text-xl font-bold text-gray-900">Multi<span className="text-green-600">Vendas</span></span>
                 </Link>
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
-                  aria-label="Fechar menu"
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-4 overflow-y-auto flex-1 space-y-4">
-                {/* Mobile Search */}
-                <form onSubmit={(e) => { handleSearch(e); setIsMobileMenuOpen(false); }} className="relative">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <div className="p-4">
+                <form onSubmit={(e) => { handleSearch(e); setIsMobileMenuOpen(false); }} className="relative mb-6">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input 
                     type="text" 
                     placeholder="Pesquisar produtos..." 
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-100 border border-transparent rounded-xl text-sm font-medium focus:bg-white focus:border-green-500 transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-green-500 transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </form>
 
-                {/* Mobile Sell Banner */}
-                <a
-                  href="https://wa.me/258873319094?text=Ol%C3%A1%2C%20gostaria%20de%20vender%20um%20bem%20na%20MultiVendas"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 text-white font-bold rounded-xl text-sm shadow-sm"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Vender na MultiVendas</span>
-                </a>
-
-                {/* Navigation links */}
-                <div className="space-y-1 pt-1">
+                <div className="space-y-1">
                   {navItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     const Icon = item.icon;
@@ -273,83 +232,35 @@ function Layout({ children, userProfile, user, setUser, setUserProfile }: {
                         to={item.path}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className={cn(
-                          "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors",
-                          isAction ? "bg-green-600 text-white" :
-                          isActive ? "bg-green-50 text-green-700" : "text-gray-700 hover:bg-gray-50"
+                          "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                          isAction ? "bg-green-600 text-white shadow-md shadow-green-200" :
+                          isActive ? "bg-green-50 text-green-600" : "text-gray-600 hover:bg-gray-50"
                         )}
                       >
-                        <Icon className="w-4 h-4" />
+                        <Icon className="w-5 h-5" />
                         {item.label}
                       </Link>
                     );
                   })}
-                  <Link
-                    to="/como-comprar"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50"
-                  >
-                    <Package className="w-4 h-4" />
-                    Como Comprar
-                  </Link>
-                  <Link
-                    to="/seguranca"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50"
-                  >
-                    <ShieldCheck className="w-4 h-4" />
-                    Segurança
-                  </Link>
-                  <Link
-                    to="/termos"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Termos de Uso
-                  </Link>
-                </div>
-
-                {/* Direct WhatsApp Callout in Menu */}
-                <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-1">
-                  <p className="font-bold text-gray-900">Atendimento MultiVendas</p>
-                  <p className="text-gray-500">Contacto directo em Moçambique:</p>
-                  <a 
-                    href="https://wa.me/258873319094" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-block text-green-600 font-bold hover:underline"
-                  >
-                    +258 873 319 094 (WhatsApp)
-                  </a>
                 </div>
               </div>
 
-              {userProfile ? (
-                <div className="p-4 border-t border-gray-100 mt-auto">
-                  <div className="flex items-center gap-3 mb-3">
-                    <img src={userProfile.photoURL} alt="" className="w-9 h-9 rounded-full border border-gray-200" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{userProfile.displayName}</p>
+              {userProfile && (
+                <div className="mt-auto p-4 border-t border-gray-100">
+                  <div className="flex items-center gap-3 mb-4">
+                    <img src={userProfile.photoURL} alt="" className="w-10 h-10 rounded-full border border-gray-200" />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{userProfile.displayName}</p>
                       <p className="text-xs text-gray-500 capitalize">{userProfile.role}</p>
                     </div>
                   </div>
                   <button 
                     onClick={() => { logout(); setIsMobileMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                     Sair da Conta
                   </button>
-                </div>
-              ) : (
-                <div className="p-4 border-t border-gray-100 mt-auto">
-                  <Link
-                    to="/auth"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-bold text-sm flex items-center justify-center"
-                  >
-                    Entrar na Conta
-                  </Link>
                 </div>
               )}
             </motion.div>
@@ -373,143 +284,63 @@ function Layout({ children, userProfile, user, setUser, setUserProfile }: {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200/80 pt-16 pb-24 md:pb-14 px-4 sm:px-6 lg:px-8 mt-16">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-6">
-          {/* Col 1: MultiVendas Brand */}
-          <div className="sm:col-span-2 space-y-4">
+      <footer className="bg-white border-t border-gray-200 pt-12 pb-24 md:pb-12 px-6 mt-12">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+          <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <span className="text-2xl font-black text-gray-900 tracking-tight">
-                Multi<span className="text-green-600">Vendas</span>
-              </span>
+              <img src="https://i.ibb.co/v6YJhrxm/acb0ea53-2e32-4685-977e-839f9d0da065.png" alt="MultiVendas Logo" className="h-8 w-auto" />
+              <span className="text-xl font-bold text-gray-900">Multi<span className="text-green-600">Vendas</span></span>
             </Link>
-            <p className="text-sm font-semibold text-gray-800">
-              “Vendas inteligentes, resultados reais.”
+            <p className="text-sm text-gray-500 leading-relaxed">
+              A loja virtual mais confiável de Moçambique. Encontre os melhores produtos com segurança e tecnologia.
             </p>
-            <p className="text-xs text-gray-500 leading-relaxed max-w-sm">
-              A plataforma comercial de Moçambique para quem quer comprar, vender e negociar bens com rapidez, seriedade e contacto directo.
-            </p>
-            <div className="flex items-center gap-3 pt-1">
-              <a 
-                href="https://facebook.com" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-9 h-9 bg-gray-100 hover:bg-green-600 hover:text-white rounded-xl flex items-center justify-center text-gray-600 transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="w-4 h-4" />
+            <div className="flex items-center gap-4">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-green-600 hover:text-white transition-all">
+                <Facebook className="w-5 h-5" />
               </a>
-              <a 
-                href="https://instagram.com" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-9 h-9 bg-gray-100 hover:bg-green-600 hover:text-white rounded-xl flex items-center justify-center text-gray-600 transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a 
-                href="https://wa.me/258873319094" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-9 h-9 bg-green-50 hover:bg-green-600 text-green-700 hover:text-white rounded-xl flex items-center justify-center transition-colors"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle className="w-4 h-4" />
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-green-600 hover:text-white transition-all">
+                <Instagram className="w-5 h-5" />
               </a>
             </div>
           </div>
 
-          {/* Col 2: Comprar */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900">Comprar</h4>
-            <ul className="space-y-2 text-xs font-medium text-gray-600">
+          <div>
+            <h4 className="font-bold text-gray-900 mb-4">Links Rápidos</h4>
+            <ul className="space-y-2 text-sm text-gray-500">
               <li><Link to="/" className="hover:text-green-600 transition-colors">Início</Link></li>
-              <li><Link to="/categories" className="hover:text-green-600 transition-colors">Todas as Categorias</Link></li>
-              <li><a href="/#anuncios-em-destaque" className="hover:text-green-600 transition-colors">Anúncios em Destaque</a></li>
-              <li><Link to="/como-comprar" className="hover:text-green-600 transition-colors">Como Comprar</Link></li>
+              <li><Link to="/categories" className="hover:text-green-600 transition-colors">Categorias</Link></li>
+              <li><Link to="/chat" className="hover:text-green-600 transition-colors">Mensagens</Link></li>
+              <li><Link to="/profile" className="hover:text-green-600 transition-colors">Minha Conta</Link></li>
             </ul>
           </div>
 
-          {/* Col 3: Vender */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900">Vender</h4>
-            <ul className="space-y-2 text-xs font-medium text-gray-600">
-              <li>
-                <a 
-                  href="https://wa.me/258873319094?text=Ol%C3%A1%2C%20quero%20vender%20um%20bem%20na%20MultiVendas" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-green-600 transition-colors font-bold text-green-700"
-                >
-                  Vender na MultiVendas
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="https://wa.me/258873319094" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-green-600 transition-colors"
-                >
-                  WhatsApp Comercial
-                </a>
-              </li>
-              <li><Link to="/seguranca" className="hover:text-green-600 transition-colors">Dicas de Negociação</Link></li>
+          <div>
+            <h4 className="font-bold text-gray-900 mb-4">Suporte</h4>
+            <ul className="space-y-2 text-sm text-gray-500">
+              <li><Link to="/como-comprar" className="hover:text-green-600 transition-colors">Como comprar</Link></li>
+              <li><Link to="/seguranca" className="hover:text-green-600 transition-colors">Segurança</Link></li>
+              <li><Link to="/termos" className="hover:text-green-600 transition-colors">Termos de Uso</Link></li>
             </ul>
           </div>
 
-          {/* Col 4: Categorias */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900">Categorias</h4>
-            <ul className="space-y-2 text-xs font-medium text-gray-600">
-              <li><Link to="/categories?cat=Carros" className="hover:text-green-600 transition-colors">Carros & Viaturas</Link></li>
-              <li><Link to="/categories?cat=Eletrónicos" className="hover:text-green-600 transition-colors">Eletrónicos</Link></li>
-              <li><Link to="/categories?cat=Imóveis" className="hover:text-green-600 transition-colors">Imóveis</Link></li>
-              <li><Link to="/categories?cat=Moda" className="hover:text-green-600 transition-colors">Moda & Calçado</Link></li>
-              <li><Link to="/categories?cat=Construção" className="hover:text-green-600 transition-colors">Construção</Link></li>
-            </ul>
-          </div>
-
-          {/* Col 5: Empresa, Ajuda & Contactos */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900">Contactos & Suporte</h4>
-            <ul className="space-y-2 text-xs text-gray-600">
-              <li><Link to="/seguranca" className="hover:text-green-600 transition-colors font-medium">Segurança</Link></li>
-              <li><Link to="/termos" className="hover:text-green-600 transition-colors font-medium">Termos de Uso</Link></li>
-              <li className="pt-1">
-                <a 
-                  href="https://wa.me/258873319094" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block font-bold text-gray-900 hover:text-green-600 transition-colors font-mono"
-                >
-                  +258 873 319 094
-                </a>
-                <span className="text-[11px] text-gray-400">Maputo, Moçambique</span>
-              </li>
-            </ul>
+          <div>
+            <h4 className="font-bold text-gray-900 mb-4">Newsletter</h4>
+            <p className="text-sm text-gray-500 mb-4">Receba as melhores ofertas direto no seu e-mail.</p>
+            <form onSubmit={handleNewsletter} className="flex gap-2">
+              <input 
+                type="email" 
+                placeholder="Seu e-mail" 
+                required
+                className="flex-1 px-4 py-2 bg-gray-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-green-500"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+              />
+              <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-colors">Ok</button>
+            </form>
           </div>
         </div>
-
-        {/* Newsletter & Bottom Bar */}
-        <div className="max-w-7xl mx-auto border-t border-gray-100 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <form onSubmit={handleNewsletter} className="flex items-center gap-2 w-full md:w-auto max-w-sm">
-            <input 
-              type="email" 
-              placeholder="Receber oportunidades por e-mail..." 
-              required
-              className="flex-1 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-green-500 focus:bg-white"
-              value={newsletterEmail}
-              onChange={(e) => setNewsletterEmail(e.target.value)}
-            />
-            <button type="submit" className="px-4 py-2 bg-gray-900 hover:bg-green-600 text-white rounded-xl font-bold text-xs transition-colors shrink-0">
-              Subscrever
-            </button>
-          </form>
-
-          <div className="text-center md:text-right text-xs text-gray-500 font-medium">
-            <p>© 2026 MultiVendas • Vendas inteligentes, resultados reais. Todos os direitos reservados.</p>
-          </div>
+        <div className="max-w-7xl mx-auto border-t border-gray-100 mt-12 pt-8 text-center text-xs text-gray-400 font-bold uppercase tracking-widest">
+          <Link to="/portal-admin-secreto" className="hover:text-gray-500 transition-colors">©</Link> 2026 MultiVendas • Todos os direitos reservados
         </div>
       </footer>
 
